@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-})
+const getOpenAI = () => {
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) throw new Error('OpenAI API Key is missing')
+    return new OpenAI({ apiKey })
+}
 
 export async function POST(req: Request) {
     try {
@@ -31,6 +33,7 @@ export async function POST(req: Request) {
       }
     `
 
+        const openai = getOpenAI()
         const completion = await openai.chat.completions.create({
             messages: [{ role: "system", content: "You are a fair and constructive grader." }, { role: "user", content: prompt }],
             model: "gpt-3.5-turbo",
