@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import { Users, PlusCircle, ArrowRight, Trash2, MoreVertical, Calendar } from 'lucide-react'
+import { Users, PlusCircle, ArrowRight, Trash2, Calendar } from 'lucide-react'
+import ConfirmDialog from '@/components/ConfirmDialog'
 
 interface ClassItem {
     id: string
@@ -16,6 +17,8 @@ export default function ClassesPage() {
     const [classes, setClasses] = useState<ClassItem[]>([])
     const [loading, setLoading] = useState(true)
     const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
+    const [confirmOpen, setConfirmOpen] = useState(false)
+    const [classToDelete, setClassToDelete] = useState<string | null>(null)
 
     const fetchClasses = async () => {
         const { data: { user } } = await supabase.auth.getUser()
@@ -47,27 +50,33 @@ export default function ClassesPage() {
         fetchClasses()
     }, [])
 
-    const handleDeleteClass = async (classId: string) => {
-        if (!confirm('Are you sure you want to delete this class? This will delete all enrollments, exams, and submissions associated with it. This action cannot be undone.')) {
-            return
-        }
+    const initiateDelete = (classId: string) => {
+        setClassToDelete(classId)
+        setConfirmOpen(true)
+    }
 
-        setDeleteLoading(classId)
+    const handleDeleteClass = async () => {
+        if (!classToDelete) return
+
+        setDeleteLoading(classToDelete)
+        setConfirmOpen(false) // Close modal immediately to show loading on card
+
         try {
             const { error } = await supabase
                 .from('classes')
                 .delete()
-                .eq('id', classId)
+                .eq('id', classToDelete)
 
             if (error) throw error
 
             // Update local state
-            setClasses(classes.filter(c => c.id !== classId))
+            setClasses(classes.filter(c => c.id !== classToDelete))
         } catch (error) {
             console.error('Error deleting class:', error)
             alert('Failed to delete class')
         } finally {
             setDeleteLoading(null)
+            setClassToDelete(null)
         }
     }
 
@@ -99,7 +108,7 @@ export default function ClassesPage() {
                                 </div>
                                 <div className="relative">
                                     <button
-                                        onClick={() => handleDeleteClass(cls.id)}
+                                        onClick={() => initiateDelete(cls.id)}
                                         disabled={deleteLoading === cls.id}
                                         className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
                                         title="Delete Class"
@@ -158,6 +167,15 @@ export default function ClassesPage() {
                     </div>
                 )}
             </div>
+
+            <ConfirmDialog
+                isOpen={confirmOpen}
+                title="Delete Class"
+                message="Are you sure you want to delete this class? This will permanently delete all associated enrollments, exams, and submissions. This action cannot be undone."
+                confirmText="Yes, Delete Class"
+                onConfirm={handleDeleteClass}
+                onCancel={() => setConfirmOpen(false)}
+            />
         </div>
     )
 }

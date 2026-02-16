@@ -19,6 +19,13 @@ export default function SignupPage() {
         setLoading(true)
         setError(null)
 
+        // Domain restriction for instructors
+        if (role === 'instructor' && !email.endsWith('@uncommon.org')) {
+            setError('Instructor accounts are restricted to @uncommon.org emails only.')
+            setLoading(false)
+            return
+        }
+
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -31,7 +38,11 @@ export default function SignupPage() {
         })
 
         if (error) {
-            setError(error.message)
+            if (error.message.includes('rate limit')) {
+                setError('Too many signup attempts. Please wait a while before trying again.')
+            } else {
+                setError(error.message)
+            }
             setLoading(false)
         } else {
             router.push('/login?message=Check your email for confirmation')
