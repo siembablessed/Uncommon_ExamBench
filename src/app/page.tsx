@@ -2,27 +2,42 @@
 
 import Link from 'next/link'
 import { BookOpen, CheckCircle, Shield, Users, ArrowRight } from 'lucide-react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 export default function LandingPage() {
   const router = useRouter()
 
+  const [loading, setLoading] = useState(true)
+
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        const role = session.user.user_metadata.role
-        if (role === 'instructor') router.push('/instructor/dashboard')
-        else if (role === 'student') router.push('/student/dashboard')
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          const role = session.user.user_metadata.role
+          if (role === 'instructor') router.push('/instructor/dashboard')
+          else if (role === 'student') router.push('/student/dashboard')
+        } else {
+          setLoading(false)
+        }
+      } catch (error) {
+        console.error('Error checking session:', error)
+        setLoading(false)
       }
     }
     checkSession()
   }, [router])
 
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen bg-slate-50">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+    </div>
+  )
+
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen" suppressHydrationWarning>
       {/* Hero Section */}
       <section className="bg-gradient-to-b from-indigo-50 to-white pt-20 pb-32 px-6">
         <div className="container mx-auto text-center max-w-4xl">

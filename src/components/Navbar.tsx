@@ -81,10 +81,14 @@ export default function Navbar() {
 
     if (loading) return <div className="h-16 bg-white/80 border-b border-slate-200 animate-pulse" suppressHydrationWarning />
 
+    const logoLink = user
+        ? (userRole === 'instructor' ? '/instructor/dashboard' : '/student/dashboard')
+        : '/'
+
     return (
         <nav className="glass-nav" suppressHydrationWarning>
             <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-                <Link href="/" className="text-xl font-bold text-indigo-600 flex items-center gap-2">
+                <Link href={logoLink} className="text-xl font-bold text-indigo-600 flex items-center gap-2">
                     <div
                         className="h-8 w-8 bg-indigo-600 rounded-lg flex items-center justify-center"
                         suppressHydrationWarning
