@@ -60,6 +60,9 @@ export default function StudentSettingsPage() {
 
             if (error) throw error
             setMessage({ text: 'Profile updated successfully!', type: 'success' })
+
+            // Notify other components (Navbar)
+            window.dispatchEvent(new Event('profile-updated'))
         } catch (error: any) {
             setMessage({ text: error.message || 'Error updating profile', type: 'error' })
         }

@@ -17,19 +17,29 @@ export default function Navbar() {
 
     useEffect(() => {
         const fetchUserAndProfile = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            setUser(user)
+            try {
+                const { data: { user }, error } = await supabase.auth.getUser()
+                if (error || !user) {
+                    setLoading(false)
+                    return
+                }
 
-            if (user) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('avatar_url')
-                    .eq('id', user.id)
-                    .single()
+                setUser(user)
 
-                if (profile?.avatar_url) setAvatarUrl(profile.avatar_url)
+                if (user) {
+                    const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('avatar_url')
+                        .eq('id', user.id)
+                        .single()
+
+                    if (profile?.avatar_url) setAvatarUrl(profile.avatar_url)
+                }
+            } catch (error) {
+                console.error('Error fetching user profile:', error)
+            } finally {
+                setLoading(false)
             }
-            setLoading(false)
         }
 
         fetchUserAndProfile()
@@ -47,9 +57,16 @@ export default function Navbar() {
         }
         document.addEventListener('mousedown', handleClickOutside)
 
+        // Listen for profile updates
+        const handleProfileUpdate = () => {
+            fetchUserAndProfile()
+        }
+        window.addEventListener('profile-updated', handleProfileUpdate)
+
         return () => {
             subscription.unsubscribe()
             document.removeEventListener('mousedown', handleClickOutside)
+            window.removeEventListener('profile-updated', handleProfileUpdate)
         }
     }, [])
 
