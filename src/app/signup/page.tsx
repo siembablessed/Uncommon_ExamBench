@@ -5,11 +5,22 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+const HUBS = [
+    'Dzivarasekwa',
+    'Mufakose',
+    'Warren Park',
+    'Kambuzuma',
+    'Mbare',
+    'Victoria Falls',
+    'Bulawayo'
+]
+
 export default function SignupPage() {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [fullName, setFullName] = useState('')
     const [role, setRole] = useState<'student' | 'instructor'>('student')
+    const [hub, setHub] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const router = useRouter()
@@ -26,6 +37,12 @@ export default function SignupPage() {
             return
         }
 
+        if (!hub) {
+            setError('Please select your Hub location.')
+            setLoading(false)
+            return
+        }
+
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -33,6 +50,7 @@ export default function SignupPage() {
                 data: {
                     full_name: fullName,
                     role: role,
+                    hub: hub,
                 },
             },
         })
@@ -54,7 +72,7 @@ export default function SignupPage() {
             <div className="w-full max-w-md card">
                 <div className="text-center mb-8">
                     <h2 className="text-2xl font-bold text-slate-900">Create an Account</h2>
-                    <p className="text-slate-500 mt-2">Join ExamNexus today</p>
+                    <p className="text-slate-500 mt-2">Join Bvunzo today</p>
                 </div>
 
                 {error && (
@@ -97,6 +115,22 @@ export default function SignupPage() {
                             placeholder="Create a strong password"
                         />
                     </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Select Hub</label>
+                        <select
+                            value={hub}
+                            onChange={(e) => setHub(e.target.value)}
+                            required
+                            className="input-field"
+                        >
+                            <option value="">Select a location...</option>
+                            {HUBS.map((h) => (
+                                <option key={h} value={h}>{h}</option>
+                            ))}
+                        </select>
+                    </div>
+
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">I am a...</label>
                         <div className="grid grid-cols-2 gap-4">

@@ -31,28 +31,33 @@ export default function LandingPage() {
   }, [router])
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-50">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+    <div className="flex items-center justify-center min-h-screen bg-slate-50" suppressHydrationWarning>
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" suppressHydrationWarning></div>
     </div>
   )
 
   return (
     <div className="flex flex-col min-h-screen" suppressHydrationWarning>
       {/* Hero Section */}
-      <section className="bg-gradient-to-b from-indigo-50 to-white pt-20 pb-32 px-6">
-        <div className="container mx-auto text-center max-w-4xl">
-          <div className="inline-flex items-center gap-2 bg-indigo-100 text-indigo-700 px-4 py-1.5 rounded-full text-sm font-medium mb-8">
+      <section className="relative pt-20 pb-32 px-6 overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 bg-amber-50 z-0"></div>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-african-print opacity-10 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 left-0 w-64 h-64 bg-mudcloth opacity-10 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2"></div>
+
+        <div className="container mx-auto text-center max-w-4xl relative z-10">
+          <div className="inline-flex items-center gap-2 bg-amber-100 text-amber-800 px-4 py-1.5 rounded-full text-sm font-medium mb-8">
             <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-bvunzo-primary"></span>
             </span>
             New: Enhanced Student Analytics
           </div>
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 mb-8">
-            The standard for <span className="text-indigo-600">modern exams</span>
+            The African standard for <span className="text-bvunzo-primary">modern exams</span>
           </h1>
           <p className="text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Secure, scalable, and simple. ExamNexus empowers institutions to conduct exams with confidence, providing seamless experiences for instructors and students alike.
+            Secure, scalable, and simple. Bvunzo empowers institutions to conduct exams with confidence, providing seamless experiences for instructors and students alike.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/signup" className="btn-primary text-lg px-8 py-4 flex items-center justify-center gap-2">
@@ -127,10 +132,10 @@ export default function LandingPage() {
       <footer className="bg-white border-t border-slate-200 py-12">
         <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2 font-bold text-slate-900 text-xl">
-            <span className="bg-slate-900 text-white p-1 rounded">🎓</span> ExamNexus
+            <span className="bg-bvunzo-primary text-white p-1 rounded">🎓</span> Bvunzo
           </div>
           <div className="text-slate-500 text-sm">
-            © {new Date().getFullYear()} ExamNexus Inc. All rights reserved.
+            © {new Date().getFullYear()} Bvunzo Inc. All rights reserved.
           </div>
           <div className="flex gap-6 text-slate-600">
             <a href="#" className="hover:text-indigo-600 transition-colors">Privacy</a>

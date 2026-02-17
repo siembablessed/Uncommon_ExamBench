@@ -41,7 +41,7 @@ export default function LoginPage() {
             <div className="w-full max-w-md card">
                 <div className="text-center mb-8">
                     <h2 className="text-2xl font-bold text-slate-900">Welcome Back</h2>
-                    <p className="text-slate-500 mt-2">Sign in to your ExamNexus account</p>
+                    <p className="text-slate-500 mt-2">Sign in to your Bvunzo account</p>
                 </div>
 
                 {error && (

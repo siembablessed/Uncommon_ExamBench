@@ -163,17 +163,20 @@ export default function Navbar() {
         : '/'
 
     return (
-        <nav className="glass-nav" suppressHydrationWarning>
+        <nav className="glass-nav relative" suppressHydrationWarning>
+            {/* African Print Border Top */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-mudcloth"></div>
+
             <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-                <Link href={logoLink} className="text-xl font-bold text-indigo-600 flex items-center gap-2">
+                <Link href={logoLink} className="text-xl font-bold text-bvunzo-secondary flex items-center gap-2">
                     <div
-                        className="h-8 w-8 bg-indigo-600 rounded-lg flex items-center justify-center"
+                        className="h-8 w-8 bg-bvunzo-primary rounded-lg flex items-center justify-center shadow-sm"
                         suppressHydrationWarning
                     >
-                        <span className="text-white font-bold text-xl">E</span>
+                        <span className="text-white font-bold text-xl">B</span>
                     </div>
-                    <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                        ExamNexus
+                    <span className="text-xl font-bold text-slate-800">
+                        Bvunzo
                     </span>
                 </Link>
 

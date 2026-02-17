@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
-import { FileText, Clock, PlayCircle, BookOpen, CheckCircle } from 'lucide-react'
+import { FileText, Clock, PlayCircle, BookOpen, CheckCircle, ArrowRight } from 'lucide-react'
 
 export default function StudentDashboard() {
     const [exams, setExams] = useState<any[]>([])
@@ -239,11 +239,18 @@ function ExamCard({ exam, status, submission }: { exam: any, status: 'active' | 
                 )}
 
                 {status === 'completed' && (
-                    <div className="text-right">
-                        <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Grade</div>
-                        <div className={`text-lg font-bold ${submission?.grade ? 'text-emerald-600' : 'text-slate-400'}`}>
-                            {submission?.grade !== null ? `${submission.grade}%` : 'Pending'}
+                    <div className="flex items-center gap-4">
+                        <div className="text-right">
+                            <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Grade</div>
+                            <div className={`text-lg font-bold ${submission?.grade ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                {submission?.grade !== null ? `${submission.grade}%` : 'Pending'}
+                            </div>
                         </div>
+                        {submission?.grade !== null && (
+                            <Link href={`/student/results/${submission.id}`} className="btn-secondary text-sm px-3 py-1.5 flex items-center gap-1">
+                                View <ArrowRight size={14} />
+                            </Link>
+                        )}
                     </div>
                 )}
             </div>
