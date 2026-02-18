@@ -130,9 +130,6 @@ export async function POST(req: Request) {
 
         // Post-processing cleanup
         questions.forEach(q => {
-            if (!q.correctAnswer && q.options.length > 0) {
-                q.correctAnswer = q.options[0] // Default
-            }
             // Remove meta fields
             delete q.originalIndex
         })

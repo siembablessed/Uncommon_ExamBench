@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { Upload, Calendar, FileText, ArrowLeft } from 'lucide-react'
+import { Upload, Calendar, FileText, ArrowLeft, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
 import { toast } from 'sonner'
@@ -322,27 +322,58 @@ export default function CreateExamPage() {
                                 <h4 className="font-bold text-slate-900">Preview ({questions.length} Questions):</h4>
                                 <button type="button" onClick={() => setQuestions([])} className="text-xs text-red-500 underline">Clear</button>
                             </div>
-                            <ul className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                            <ul className="space-y-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                                 {questions.map((q: any, i: number) => (
-                                    <li key={i} className="bg-slate-50 p-3 rounded text-sm border border-slate-100 relative group">
+                                    <li key={i} className="bg-slate-50 p-4 rounded-lg border border-slate-200 relative group transition-all hover:border-indigo-300">
                                         <button
                                             type="button"
                                             onClick={() => handleDeleteQuestion(i)}
-                                            className="absolute top-2 right-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            className="absolute top-3 right-3 text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-red-50 rounded"
                                             title="Remove Question"
                                         >
-                                            <div className="bg-white rounded-full p-1 shadow-sm border border-red-100">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
-                                            </div>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
                                         </button>
-                                        <p className="font-medium text-slate-800 pr-6">{i + 1}. {q.text || q.question}</p>
-                                        <div className="grid grid-cols-2 gap-2 mt-2">
-                                            {q.options?.map((opt: string, idx: number) => (
-                                                <div key={idx} className={`text-xs px-2 py-1 rounded ${opt === q.correctAnswer ? 'bg-emerald-100 text-emerald-800 font-medium' : 'bg-white text-slate-600 border border-slate-200'}`}>
-                                                    {opt}
-                                                </div>
-                                            ))}
+                                        <p className="font-medium text-slate-800 pr-8 mb-3 text-base">
+                                            <span className="text-indigo-600 font-bold mr-2">{i + 1}.</span>
+                                            {q.text || q.question}
+                                        </p>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6">
+                                            {q.options?.map((opt: string, idx: number) => {
+                                                const isCorrect = opt === q.correctAnswer
+                                                return (
+                                                    <button
+                                                        key={idx}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const newQuestions = [...questions]
+                                                            newQuestions[i].correctAnswer = opt
+                                                            setQuestions(newQuestions)
+                                                        }}
+                                                        className={`text-left text-sm px-3 py-2 rounded-md transition-all border w-full flex items-center justify-between group/btn ${isCorrect
+                                                                ? 'bg-emerald-100 text-emerald-900 border-emerald-500 font-semibold shadow-sm ring-1 ring-emerald-500'
+                                                                : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-400 hover:text-indigo-600 hover:bg-slate-50'
+                                                            }`}
+                                                    >
+                                                        <span className="flex items-center">
+                                                            <span className={`inline-flex items-center justify-center w-6 h-6 text-xs rounded-full border mr-3 ${isCorrect ? 'border-emerald-600 bg-emerald-200 text-emerald-800 font-bold' : 'border-slate-300 text-slate-500 bg-slate-50'}`}>
+                                                                {String.fromCharCode(65 + idx)}
+                                                            </span>
+                                                            {opt}
+                                                        </span>
+                                                        {isCorrect && (
+                                                            <span className="text-emerald-600 bg-white rounded-full p-0.5 shadow-sm">
+                                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                            </span>
+                                                        )}
+                                                    </button>
+                                                )
+                                            })}
                                         </div>
+                                        {!q.correctAnswer && (
+                                            <div className="mt-2 text-xs text-amber-600 font-medium flex items-center gap-1 pl-6">
+                                                <AlertCircle size={12} /> Please select the correct answer
+                                            </div>
+                                        )}
                                     </li>
                                 ))}
                             </ul>
