@@ -15,7 +15,12 @@ interface Submission {
     grade: number | null
     student: { full_name: string, email: string }
     content: string // URL or text
+    answers: any // JSONB
+    feedback: string
 }
+
+// ... existing code ...
+
 
 export default function ExamDetailInstructorPage() {
     const params = useParams()
@@ -158,10 +163,16 @@ export default function ExamDetailInstructorPage() {
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-mono flex items-center gap-2">
                                     {sub.grade !== null ? (
-                                        <span className="font-bold">{sub.grade}</span>
+                                        <span className="font-bold">{sub.grade}%</span>
                                     ) : (
                                         <span className="text-slate-400">-</span>
                                     )}
+                                    <Link
+                                        href={`/instructor/exams/${examId}/submissions/${sub.id}`}
+                                        className="btn-secondary text-xs py-1 px-3 ml-2"
+                                    >
+                                        Review
+                                    </Link>
                                     {sub.status !== 'graded' && sub.content && !sub.content.startsWith('http') && (
                                         <AutoGradeButton
                                             submission={sub}

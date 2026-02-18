@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Users, PlusCircle, ArrowRight, Trash2, Calendar } from 'lucide-react'
 import ConfirmDialog from '@/components/ConfirmDialog'
 
@@ -14,6 +15,7 @@ interface ClassItem {
 }
 
 export default function ClassesPage() {
+    const router = useRouter()
     const [classes, setClasses] = useState<ClassItem[]>([])
     const [loading, setLoading] = useState(true)
     const [deleteLoading, setDeleteLoading] = useState<string | null>(null)
@@ -71,6 +73,7 @@ export default function ClassesPage() {
 
             // Update local state
             setClasses(classes.filter(c => c.id !== classToDelete))
+            router.refresh() // Force Next.js to revalidate data
         } catch (error) {
             console.error('Error deleting class:', error)
             alert('Failed to delete class')

@@ -2,7 +2,7 @@
 
 import DeleteAccountSection from '@/components/DeleteAccountSection'
 
-export default function StudentSettingsPage() {
+export default function InstructorSettingsPage() {
     return (
         <div className="container mx-auto px-6 py-8 max-w-2xl">
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Settings</h1>

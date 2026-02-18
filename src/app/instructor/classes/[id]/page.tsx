@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, UserPlus, Trash2, Users, Mail } from 'lucide-react'
+import { ArrowLeft, UserPlus, Trash2, Users, Mail, Settings } from 'lucide-react'
+import ConfirmDialog from '@/components/ConfirmDialog'
 
 interface Student {
     id: string
@@ -153,6 +154,30 @@ export default function ClassDetailPage() {
         }
     }
 
+    // --- Delete Class Feature ---
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
+
+    const handleDeleteClass = async () => {
+        setIsDeleting(true)
+        try {
+            const { error } = await supabase
+                .from('classes')
+                .delete()
+                .eq('id', classId)
+
+            if (error) throw error
+
+            alert('Class deleted successfully')
+            router.refresh()
+            router.push('/instructor/dashboard')
+        } catch (error: any) {
+            console.error('Delete class error:', error)
+            alert('Failed to delete class: ' + error.message)
+            setIsDeleting(false)
+        }
+    }
+
     // --- Directory Feature ---
     const [directory, setDirectory] = useState<Student[]>([])
     const [directoryLoading, setDirectoryLoading] = useState(false)
@@ -253,12 +278,29 @@ export default function ClassDetailPage() {
                             <h1 className="text-3xl font-bold text-slate-900 mb-2">{classData.name}</h1>
                             <p className="text-slate-500 font-mono text-sm">Class ID: {classData.id}</p>
                         </div>
-                        <div className="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-full text-sm font-medium">
-                            <Users size={16} />
-                            {students.length} Students Enrolled
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setConfirmDeleteOpen(true)}
+                                className="flex items-center gap-2 bg-white text-red-600 border border-red-200 px-4 py-2 rounded-full text-sm font-medium hover:bg-red-50 transition-colors"
+                            >
+                                <Trash2 size={16} /> Delete Class
+                            </button>
+                            <div className="flex items-center gap-2 bg-indigo-50 text-indigo-700 px-4 py-2 rounded-full text-sm font-medium">
+                                <Users size={16} />
+                                {students.length} Students Enrolled
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <ConfirmDialog
+                    isOpen={confirmDeleteOpen}
+                    title="Delete Class"
+                    message="Are you sure you want to delete this class? This will permanently delete all associated enrollments, exams, and submissions. This action cannot be undone."
+                    confirmText={isDeleting ? "Deleting..." : "Yes, Delete Class"}
+                    onConfirm={handleDeleteClass}
+                    onCancel={() => setConfirmDeleteOpen(false)}
+                />
 
                 <div className="p-8">
                     <div className="grid lg:grid-cols-3 gap-12">

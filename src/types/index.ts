@@ -5,6 +5,14 @@ export interface ClassItem {
     instructor_id?: string
 }
 
+export interface Question {
+    id: string
+    text: string
+    options: string[]
+    correctAnswer: string
+    points: number
+}
+
 export interface ExamItem {
     id: string
     title: string
@@ -12,6 +20,7 @@ export interface ExamItem {
     due_date: string
     created_by?: string
     created_at?: string
+    questions?: Question[]
 }
 
 export interface SubmissionItem {
@@ -29,4 +38,5 @@ export interface UserProfile {
     email: string
     role: 'instructor' | 'student'
     avatar_url?: string
+    hub?: string
 }

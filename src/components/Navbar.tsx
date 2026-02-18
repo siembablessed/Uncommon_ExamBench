@@ -284,7 +284,7 @@ export default function Navbar() {
                                         </div>
 
                                         <Link
-                                            href={userRole === 'student' ? "/student/settings" : "/instructor/dashboard"} // Instructors don't have settings page yet, fallback to dashboard
+                                            href={userRole === 'instructor' ? "/instructor/settings" : "/student/settings"}
                                             className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
                                             onClick={() => setIsDropdownOpen(false)}
                                         >

@@ -2,15 +2,21 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import Link from 'next/link'
-import { FileText, Clock, PlayCircle, BookOpen, CheckCircle, ArrowRight } from 'lucide-react'
+import { MapPin } from 'lucide-react'
+import { ClassItem, ExamItem, SubmissionItem } from '@/types'
+import StudentStatsCards from '@/components/dashboard/StudentStatsCards'
+import StudentExamsList from '@/components/dashboard/StudentExamsList'
+import EnrolledClassesList from '@/components/dashboard/EnrolledClassesList'
+import OnlineUsersList from '@/components/OnlineUsersList'
 
 export default function StudentDashboard() {
-    const [exams, setExams] = useState<any[]>([])
-    const [submissions, setSubmissions] = useState<any[]>([])
+    const [exams, setExams] = useState<ExamItem[]>([])
+    const [submissions, setSubmissions] = useState<SubmissionItem[]>([])
+    // Enrolled classes might need a custom type if ClassItem doesn't match the join query exact shape
+    // But we only display name/id so ClassItem is fine if we map it
     const [classes, setClasses] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState<'todo' | 'missed' | 'completed'>('todo')
+    const [hub, setHub] = useState<string | null>(null)
 
     useEffect(() => {
         fetchData()
@@ -21,6 +27,15 @@ export default function StudentDashboard() {
             setLoading(true)
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return
+
+            // Fetch profile for Hub
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('hub')
+                .eq('id', user.id)
+                .single()
+
+            if (profile?.hub) setHub(profile.hub)
 
             // Fetch enrolled classes
             const { data: enrollments } = await supabase
@@ -69,10 +84,8 @@ export default function StudentDashboard() {
         completed: 0
     }
 
-    // Helper to check submission status
     const getSubmission = (examId: string) => submissions.find(s => s.exam_id === examId)
 
-    // Process exams for metrics
     exams.forEach(exam => {
         const sub = getSubmission(exam.id)
         const isPastDue = new Date(exam.due_date) < now
@@ -85,180 +98,69 @@ export default function StudentDashboard() {
         }
     })
 
-    // Calculate avg grade
     const gradedSubs = submissions.filter(s => s.grade !== null)
     if (gradedSubs.length > 0) {
         const total = gradedSubs.reduce((acc, curr) => acc + (curr.grade || 0), 0)
         metrics.avgGrade = Math.round(total / gradedSubs.length)
     }
 
-    // Filter lists for tabs
     const todoExams = exams.filter(e => !getSubmission(e.id) && new Date(e.due_date) > now)
     const missedExams = exams.filter(e => !getSubmission(e.id) && new Date(e.due_date) < now)
     const completedExams = exams.filter(e => getSubmission(e.id))
 
     if (loading) return (
-        <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
+        <div className="flex items-center justify-center min-h-[calc(100vh-64px)]" suppressHydrationWarning>
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
         </div>
     )
 
     return (
-        <div className="container mx-auto px-6 py-8">
-            <h1 className="text-3xl font-bold text-slate-900 mb-8">Dashboard</h1>
-
-            {/* Metrics Row */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <StatCard title="Avg. Grade" value={`${metrics.avgGrade}%`} icon={<CheckCircle className="text-emerald-600" />} />
-                <StatCard title="Pending" value={metrics.pending} icon={<Clock className="text-indigo-600" />} />
-                <StatCard title="Missed" value={metrics.missed} icon={<Clock className="text-red-500" />} />
-                <StatCard title="Completed" value={metrics.completed} icon={<FileText className="text-slate-600" />} />
-            </div>
-
-            <div className="grid lg:grid-cols-3 gap-8">
-                {/* Main Column: Tabs & Exams */}
-                <section className="lg:col-span-2 space-y-6">
-                    {/* Tabs */}
-                    <div className="flex border-b border-slate-200 gap-6">
-                        <button
-                            className={`pb-3 font-medium text-sm border-b-2 transition-colors ${activeTab === 'todo' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                            onClick={() => setActiveTab('todo')}
-                        >
-                            To Do ({todoExams.length})
-                        </button>
-                        <button
-                            className={`pb-3 font-medium text-sm border-b-2 transition-colors ${activeTab === 'missed' ? 'border-red-500 text-red-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                            onClick={() => setActiveTab('missed')}
-                        >
-                            Missed ({missedExams.length})
-                        </button>
-                        <button
-                            className={`pb-3 font-medium text-sm border-b-2 transition-colors ${activeTab === 'completed' ? 'border-emerald-500 text-emerald-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                            onClick={() => setActiveTab('completed')}
-                        >
-                            Completed ({completedExams.length})
-                        </button>
-                    </div>
-
-                    <div className="space-y-4">
-                        {/* TO DO LIST */}
-                        {activeTab === 'todo' && (
-                            todoExams.length === 0 ? <EmptyState message="No pending exams." /> :
-                                todoExams.map(exam => <ExamCard key={exam.id} exam={exam} status="active" />)
-                        )}
-
-                        {/* MISSED LIST */}
-                        {activeTab === 'missed' && (
-                            missedExams.length === 0 ? <EmptyState message="Great job! No missed exams." /> :
-                                missedExams.map(exam => <ExamCard key={exam.id} exam={exam} status="missed" />)
-                        )}
-
-                        {/* COMPLETED LIST */}
-                        {activeTab === 'completed' && (
-                            completedExams.length === 0 ? <EmptyState message="You haven't completed any exams yet." /> :
-                                completedExams.map(exam => {
-                                    const sub = getSubmission(exam.id)
-                                    return <ExamCard key={exam.id} exam={exam} status="completed" submission={sub} />
-                                })
-                        )}
-                    </div>
-                </section>
-
-                {/* Sidebar: Classes */}
-                <aside className="space-y-6">
-                    <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                        <BookOpen size={24} className="text-indigo-600" /> My Classes
-                    </h2>
-                    <div className="card bg-white p-0 overflow-hidden">
-                        <div className="divide-y divide-slate-100">
-                            {classes.length === 0 ? (
-                                <div className="p-6 text-center text-slate-500">
-                                    You are not enrolled in any classes.
-                                </div>
-                            ) : (
-                                classes.map((cls: any) => (
-                                    <div key={cls.id} className="p-4 hover:bg-slate-50 transition-colors">
-                                        <h3 className="font-semibold text-slate-900">{cls.name}</h3>
-                                        <p className="text-xs text-slate-400 mt-1">Student</p>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                        <div className="p-4 bg-slate-50 border-t border-slate-100 text-xs text-center text-slate-500">
-                            Ask your instructor for an enrollment code.
-                        </div>
-                    </div>
-                </aside>
-            </div>
-        </div>
-    )
-}
-
-function StatCard({ title, value, icon }: any) {
-    return (
-        <div className="card p-4 flex items-center gap-4">
-            <div className="bg-slate-50 p-3 rounded-full">{icon}</div>
-            <div>
-                <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">{title}</p>
-                <p className="text-2xl font-bold text-slate-900">{value}</p>
-            </div>
-        </div>
-    )
-}
-
-function EmptyState({ message }: { message: string }) {
-    return (
-        <div className="text-center py-12 bg-slate-50 rounded-lg border border-dashed border-slate-200">
-            <p className="text-slate-500 font-medium">{message}</p>
-        </div>
-    )
-}
-
-function ExamCard({ exam, status, submission }: { exam: any, status: 'active' | 'missed' | 'completed', submission?: any }) {
-    return (
-        <div className={`card hover:shadow-md transition-all duration-200 border-l-4 ${status === 'missed' ? 'border-l-red-500 bg-red-50/10' :
-            status === 'completed' ? 'border-l-emerald-500' : 'border-l-indigo-500'
-            }`}>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="container mx-auto px-6 py-8 max-w-7xl" suppressHydrationWarning>
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
-                    <h3 className="font-bold text-lg text-slate-900">{exam.title}</h3>
-                    <div className="text-sm text-slate-500 flex items-center gap-3 mt-1">
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${status === 'missed' ? 'bg-red-100 text-red-700' :
-                            status === 'completed' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
-                            }`}>
-                            {status === 'missed' ? 'Missed' : status === 'completed' ? 'Submitted' : 'Due'}
-                        </span>
-                        {activeTabDate(status, exam, submission)}
+                    <h1 className="text-3xl font-bold text-slate-900 mb-2">Student Dashboard</h1>
+                    <div className="flex items-center gap-3 text-slate-500 text-sm">
+                        <p>Track your progress and upcoming exams</p>
+                        {hub && (
+                            <>
+                                <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                                <span className="flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full font-medium border border-indigo-100 text-xs text-nowrap">
+                                    <MapPin size={12} /> {hub} Hub
+                                </span>
+                            </>
+                        )}
                     </div>
                 </div>
+            </div>
 
-                {status === 'active' && (
-                    <Link href={`/student/exams/${exam.id}`} className="btn-primary flex items-center gap-2 whitespace-nowrap">
-                        Start <PlayCircle size={16} />
-                    </Link>
-                )}
+            <StudentStatsCards
+                avgGrade={metrics.avgGrade}
+                pending={metrics.pending}
+                missed={metrics.missed}
+                completed={metrics.completed}
+            />
 
-                {status === 'completed' && (
-                    <div className="flex items-center gap-4">
-                        <div className="text-right">
-                            <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Grade</div>
-                            <div className={`text-lg font-bold ${submission?.grade ? 'text-emerald-600' : 'text-slate-400'}`}>
-                                {submission?.grade !== null ? `${submission.grade}%` : 'Pending'}
-                            </div>
-                        </div>
-                        {submission?.grade !== null && (
-                            <Link href={`/student/results/${submission.id}`} className="btn-secondary text-sm px-3 py-1.5 flex items-center gap-1">
-                                View <ArrowRight size={14} />
-                            </Link>
-                        )}
+            <div className="grid lg:grid-cols-3 gap-8">
+                {/* Main Content: Exams */}
+                <div className="lg:col-span-2 space-y-8">
+                    <StudentExamsList
+                        todoExams={todoExams}
+                        missedExams={missedExams}
+                        completedExams={completedExams}
+                        submissions={submissions}
+                    />
+                </div>
+
+                {/* Sidebar: Classes & Online Users */}
+                <div className="space-y-6">
+                    <EnrolledClassesList classes={classes} />
+                    <div className="h-[400px]">
+                        <OnlineUsersList />
                     </div>
-                )}
+                </div>
             </div>
         </div>
     )
 }
 
-function activeTabDate(status: string, exam: any, sub: any) {
-    if (status === 'completed') return `on ${new Date(sub.submitted_at).toLocaleDateString()}`
-    return new Date(exam.due_date).toLocaleString()
-}

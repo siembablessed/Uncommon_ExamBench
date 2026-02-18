@@ -89,8 +89,9 @@ export default function SignupPage() {
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
                             required
+                            minLength={3}
                             className="input-field"
-                            placeholder="John Doe"
+                            placeholder="John Doe (min 3 chars)"
                         />
                     </div>
                     <div>

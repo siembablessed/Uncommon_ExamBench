@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { PlusCircle, MapPin } from 'lucide-react'
 import OnlineUsersList from '@/components/OnlineUsersList'
+import StudentDirectory from '@/components/dashboard/StudentDirectory'
 import StatsCards from '@/components/dashboard/StatsCards'
 import ClassesList from '@/components/dashboard/ClassesList'
 import ExamsList from '@/components/dashboard/ExamsList'
 import CreateClassModal from '@/components/dashboard/CreateClassModal'
 import { ClassItem, ExamItem } from '@/types'
+import { toast } from 'sonner'
 
 export default function InstructorDashboard() {
     const [classes, setClasses] = useState<ClassItem[]>([])
@@ -18,6 +20,7 @@ export default function InstructorDashboard() {
     const [showCreateClass, setShowCreateClass] = useState(false)
     const [recentSubmissionCount, setRecentSubmissionCount] = useState(0)
     const [hub, setHub] = useState<string | null>(null)
+    const [activeTab, setActiveTab] = useState<'overview' | 'directory'>('overview')
 
     useEffect(() => {
         fetchData()
@@ -84,20 +87,27 @@ export default function InstructorDashboard() {
 
     const handleCreateClass = async (e: React.FormEvent) => {
         e.preventDefault()
+        console.log('Creating class with name:', newClassName)
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
+        if (!user) {
+            console.error('No user found')
+            return
+        }
 
-        const { error } = await supabase.from('classes').insert({
+        const { data, error } = await supabase.from('classes').insert({
             name: newClassName,
             instructor_id: user.id
-        })
+        }).select()
 
         if (!error) {
+            console.log('Class created successfully:', data)
             setNewClassName('')
             setShowCreateClass(false)
             fetchData()
+            toast.success('Class created successfully!')
         } else {
-            alert('Error creating class: ' + error.message)
+            console.error('Error creating class:', error)
+            toast.error('Error creating class: ' + error.message)
         }
     }
 
@@ -108,58 +118,99 @@ export default function InstructorDashboard() {
     )
 
     return (
-        <div className="container mx-auto px-6 py-8">
+        <div className="container mx-auto px-6 py-8 max-w-7xl" suppressHydrationWarning>
+            {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                 <div>
-                    <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-bold text-slate-900">Instructor Dashboard</h1>
+                    <h1 className="text-3xl font-bold text-slate-900 mb-2">Instructor Dashboard</h1>
+                    <div className="flex items-center gap-3 text-slate-500 text-sm">
+                        <p>Manage your classes, students, and assessments</p>
                         {hub && (
-                            <span className="flex items-center gap-1 text-sm bg-indigo-50 text-indigo-700 px-3 py-1 rounded-full font-medium border border-indigo-100">
-                                <MapPin size={14} /> {hub} Hub
-                            </span>
+                            <>
+                                <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                                <span className="flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-full font-medium border border-indigo-100 text-xs">
+                                    <MapPin size={12} /> {hub} Hub
+                                </span>
+                            </>
                         )}
                     </div>
-                    <p className="text-slate-500">Manage your classes and assessments</p>
                 </div>
-                <button
-                    onClick={() => setShowCreateClass(!showCreateClass)}
-                    className="btn-primary flex items-center gap-2"
-                >
-                    <PlusCircle size={20} /> Create New Class
-                </button>
+
+                <div className="flex items-center gap-4 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
+                    <button
+                        onClick={() => setActiveTab('overview')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'overview'
+                            ? 'bg-slate-900 text-white shadow-md'
+                            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                            }`}
+                    >
+                        Overview
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('directory')}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'directory'
+                            ? 'bg-slate-900 text-white shadow-md'
+                            : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                            }`}
+                    >
+                        Student Directory
+                    </button>
+                </div>
             </div>
 
-            <StatsCards
-                classCount={classes.length}
-                examCount={exams.length}
-                recentSubmissionCount={recentSubmissionCount}
-            />
+            {activeTab === 'overview' ? (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8">
+                    <StatsCards
+                        classCount={classes.length}
+                        examCount={exams.length}
+                        recentSubmissionCount={recentSubmissionCount}
+                    />
 
-            {/* Main Content Grid */}
-            <div className="grid lg:grid-cols-3 gap-8">
-                {/* Left Column: Classes and Exams */}
-                <div className="lg:col-span-2 space-y-8">
+                    {/* Main Content Grid */}
+                    <div className="grid lg:grid-cols-3 gap-8">
+                        {/* Left Column: Classes and Exams (Span 2) */}
+                        <div className="lg:col-span-2 space-y-6">
+                            {showCreateClass && (
+                                <CreateClassModal
+                                    newClassName={newClassName}
+                                    setNewClassName={setNewClassName}
+                                    handleCreateClass={handleCreateClass}
+                                    onCancel={() => setShowCreateClass(false)}
+                                />
+                            )}
 
-                    {showCreateClass && (
-                        <CreateClassModal
-                            newClassName={newClassName}
-                            setNewClassName={setNewClassName}
-                            handleCreateClass={handleCreateClass}
-                            onCancel={() => setShowCreateClass(false)}
-                        />
-                    )}
+                            <div className="flex items-center justify-between mb-2">
+                                <h2 className="text-xl font-bold text-slate-900">Your Resources</h2>
+                                <button
+                                    onClick={() => setShowCreateClass(!showCreateClass)}
+                                    className="flex items-center gap-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors shadow-sm hover:shadow active:scale-95 duration-200"
+                                >
+                                    <PlusCircle size={18} /> Create Class
+                                </button>
+                            </div>
 
-                    <div className="grid lg:grid-cols-2 gap-8">
-                        <ClassesList classes={classes} />
-                        <ExamsList exams={exams} />
+                            <div className="grid md:grid-cols-2 gap-6 h-[500px]">
+                                <ClassesList classes={classes} />
+                                <ExamsList exams={exams} />
+                            </div>
+                        </div>
+
+                        {/* Right Sidebar: Activity (Span 1) */}
+                        <div className="space-y-6">
+                            <div className="flex items-center justify-between mb-2 h-[42px]"> {/* h-[42px] aligns with the button height */}
+                                <h2 className="text-xl font-bold text-slate-900">Activity</h2>
+                            </div>
+                            <div className="h-[500px]">
+                                <OnlineUsersList />
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                {/* Right Sidebar */}
-                <div className="space-y-8">
-                    <OnlineUsersList />
+            ) : (
+                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <StudentDirectory />
                 </div>
-            </div>
+            )}
         </div>
     )
 }

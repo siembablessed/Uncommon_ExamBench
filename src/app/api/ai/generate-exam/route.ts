@@ -1,65 +1,115 @@
 import { NextResponse } from 'next/server'
-import OpenAI from 'openai'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
-// Initialize OpenAI lazily or check for key
-const getOpenAI = () => {
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) throw new Error('OpenAI API Key is missing')
-  return new OpenAI({ apiKey })
-}
+// Use require to avoid default import issues with pdf-parse in some environments
+const pdf = require('pdf-parse')
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '')
 
 export async function POST(req: Request) {
   try {
-    const { text, topic } = await req.json()
+    const contentType = req.headers.get('content-type') || ''
 
-    if (!text && !topic) {
-      return NextResponse.json({ error: 'Please provide text content or a topic' }, { status: 400 })
+    let topic = ''
+    let text = ''
+    let count = 5
+    let difficulty = 'medium'
+
+    // Handle Multipart Form Data (File Upload)
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await req.formData()
+      topic = formData.get('topic') as string || ''
+      count = parseInt(formData.get('count') as string) || 5
+      difficulty = formData.get('difficulty') as string || 'medium'
+
+      const file = formData.get('file') as File
+
+      if (file) {
+        try {
+          const arrayBuffer = await file.arrayBuffer()
+          const buffer = Buffer.from(arrayBuffer)
+          const data = await pdf(buffer)
+          text = data.text
+        } catch (pdfError: any) {
+          console.error('PDF Parse Error:', pdfError)
+          return NextResponse.json(
+            { error: 'Failed to parse PDF file on server: ' + pdfError.message },
+            { status: 400 }
+          )
+        }
+      }
+    } else {
+      // Handle JSON (Text/Topic only)
+      const body = await req.json()
+      topic = body.topic
+      text = body.text
+      count = body.count || 5
+      difficulty = body.difficulty || 'medium'
     }
 
-    let contextText = text || `Topic: ${topic}`
-
-    // Limit text length
-    if (contextText.length > 20000) {
-      contextText = contextText.substring(0, 20000)
+    if (!topic && !text) {
+      return NextResponse.json(
+        { error: 'Topic or PDF file is required' },
+        { status: 400 }
+      )
     }
+
+    // Truncate text if too long (Gemini has high limits but good to be safe)
+    const truncatedText = text ? text.substring(0, 30000) : ''
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
     const prompt = `
-      You are an expert exam creator. based on the following content, generate an exam with 5 multiple choice questions and 2 short answer questions.
-      
-      Content:
-      ${contextText}
+        Generate ${count} multiple-choice questions for a ${difficulty} level exam about: "${topic || 'the provided document'}".
+        ${truncatedText ? `\nContext from document:\n"${truncatedText}..."\n` : ''}
 
-      Output ONLY valid JSON in the following format:
-      {
-        "title": "Exam Title based on content",
-        "questions": [
-          {
-            "type": "multiple_choice",
-            "question": "Question text",
-            "options": ["A", "B", "C", "D"],
-            "answer": "Correct Option"
-          },
-          {
-             "type": "short_answer",
-             "question": "Question text"
-          }
+        Return ONLY a raw JSON array (no markdown formatting like \`\`\`json, no code blocks) with this specific structure:
+        [
+            {
+                "id": "1",
+                "text": "Question text here?",
+                "options": ["Option A", "Option B", "Option C", "Option D"],
+                "correctAnswer": "Option A",
+                "points": 5
+            }
         ]
+        
+        Ensure the JSON is valid and strict.
+        `
+
+    const result = await model.generateContent(prompt)
+    const response = await result.response
+    const content = response.text()
+
+    let questions = []
+    try {
+      // Clean up if the model returned markdown
+      let cleanContent = content.trim()
+
+      // Remove markdown code blocks if present
+      if (cleanContent.startsWith('```json')) {
+        cleanContent = cleanContent.replace(/^```json\s*/, '').replace(/\s*```$/, '')
+      } else if (cleanContent.startsWith('```')) {
+        cleanContent = cleanContent.replace(/^```\s*/, '').replace(/\s*```$/, '')
       }
-    `
 
-    const openai = getOpenAI()
-    const completion = await openai.chat.completions.create({
-      messages: [{ role: "system", content: "You are a helpful assistant that generates exams in JSON." }, { role: "user", content: prompt }],
-      model: "gpt-3.5-turbo",
-      response_format: { type: "json_object" },
-    })
+      questions = JSON.parse(cleanContent)
+    } catch (e) {
+      console.error('JSON Parse Error:', e)
+      console.error('Raw Content:', content)
+      return NextResponse.json(
+        { error: 'Failed to parse AI response. The model might be overloaded.' },
+        { status: 500 }
+      )
+    }
 
-    const result = JSON.parse(completion.choices[0].message.content || '{}')
-
-    return NextResponse.json(result)
+    return NextResponse.json({ questions })
 
   } catch (error: any) {
     console.error('AI Generation Error:', error)
-    return NextResponse.json({ error: error.message || 'Failed to generate exam' }, { status: 500 })
+    return NextResponse.json(
+      { error: error.message || 'Internal Server Error' },
+      { status: 500 }
+    )
   }
 }

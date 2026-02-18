@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { Upload, Calendar, FileText, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
+import { toast } from 'sonner'
+
 export default function CreateExamPage() {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
@@ -18,12 +20,13 @@ export default function CreateExamPage() {
     const [dueDate, setDueDate] = useState('')
     const [duration, setDuration] = useState('')
     const [file, setFile] = useState<File | null>(null)
+    const [answersFile, setAnswersFile] = useState<File | null>(null) // New: Marking Scheme
 
-    // AI State
-    const [activeTab, setActiveTab] = useState<'upload' | 'ai'>('upload')
+    // AI & Parser State
+    const [activeTab, setActiveTab] = useState<'upload' | 'ai' | 'parser'>('upload')
     const [isGenerating, setIsGenerating] = useState(false)
     const [aiTopic, setAiTopic] = useState('')
-    const [generatedExam, setGeneratedExam] = useState<any>(null)
+    const [questions, setQuestions] = useState<any[]>([])
 
     useEffect(() => {
         supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -45,74 +48,112 @@ export default function CreateExamPage() {
         }
     }
 
-    const handleAiGenerate = async () => {
-        if (!file && !aiTopic) {
-            alert('Please upload a PDF or enter a topic for AI generation')
+    const handleAnswersFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            setAnswersFile(e.target.files[0])
+        }
+    }
+
+    const handleParserImport = async () => {
+        if (!file) {
+            toast.error('Please upload a PDF first')
             return
         }
-
         setIsGenerating(true)
         try {
-            let extractedText = ''
-
-            if (file) {
-                // Client-side PDF Parsing
-                try {
-                    const arrayBuffer = await file.arrayBuffer()
-
-                    // Dynamic import to avoid SSR issues
-                    // @ts-ignore
-                    const pdfjsLib = await import('pdfjs-dist')
-                    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`
-
-                    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer })
-                    const pdf = await loadingTask.promise
-
-                    let fullText = ''
-                    // Loop through each page
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i)
-                        const textContent = await page.getTextContent()
-                        const pageText = textContent.items.map((item: any) => item.str).join(' ')
-                        fullText += pageText + '\n'
-                    }
-
-                    extractedText = fullText
-                } catch (err: any) {
-                    console.error('PDF Parse Error:', err)
-                    alert('Failed to read PDF file. Please try another file or enter a topic.')
-                    setIsGenerating(false)
-                    return
-                }
+            const formData = new FormData()
+            formData.append('file', file)
+            if (answersFile) {
+                formData.append('answersFile', answersFile)
             }
 
-            const res = await fetch('/api/ai/generate-exam', {
+            const res = await fetch('/api/exams/parse-pdf', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    text: extractedText,
-                    topic: aiTopic
-                })
+                body: formData
             })
 
             const data = await res.json()
-            if (data.error) throw new Error(data.error)
+            if (!res.ok) throw new Error(data.error || 'Parsing failed')
 
-            setGeneratedExam(data)
-            setTitle(data.title || title)
-            setDescription(`AI Generated Exam containing ${data.questions?.length || 0} questions.`)
-
+            if (data.questions) {
+                setQuestions(data.questions)
+                setTitle(file.name.replace('.pdf', '') + ' (Imported)')
+                setDescription('Imported from PDF via Rule-Based Parser')
+                toast.success('Questions imported successfully')
+            }
         } catch (error: any) {
-            alert('Generation failed: ' + error.message)
+            console.error('Import failed:', error)
+            toast.error('Import failed: ' + error.message)
         } finally {
             setIsGenerating(false)
         }
     }
 
+    const handleAiGenerate = async () => {
+        if (!file && !aiTopic) {
+            toast.error('Please upload a PDF or enter a topic for AI generation')
+            return
+        }
+
+        setIsGenerating(true)
+        try {
+            const formData = new FormData()
+            formData.append('topic', aiTopic)
+            if (file) {
+                formData.append('file', file)
+            }
+
+            const res = await fetch('/api/ai/generate-exam', {
+                method: 'POST',
+                body: formData
+            })
+
+            const responseText = await res.text()
+
+            let data
+            try {
+                data = JSON.parse(responseText)
+            } catch (e) {
+                console.error('Failed to parse response:', responseText)
+                throw new Error(`Server returned non-JSON response: ${responseText.substring(0, 100)}...`)
+            }
+
+            if (data.error) throw new Error(data.error)
+
+            if (data.questions) {
+                setQuestions(data.questions)
+                setTitle(aiTopic ? `${aiTopic} Exam` : 'AI Generated Exam')
+                setDescription(`AI Generated Exam containing ${data.questions.length} questions.`)
+                toast.success('AI generation complete')
+            }
+
+        } catch (error: any) {
+            console.error('Generation failed:', error)
+            toast.error('Generation failed: ' + error.message)
+        } finally {
+            setIsGenerating(false)
+        }
+    }
+
+    const handleDeleteQuestion = (index: number) => {
+        const newQuestions = [...questions]
+        newQuestions.splice(index, 1)
+        setQuestions(newQuestions)
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!classId || !dueDate) {
-            alert('Please fill in all fields')
+            toast.error('Please fill in all fields')
+            return
+        }
+
+        if (activeTab === 'parser' && questions.length === 0) {
+            toast.error('Please click "Import Exam" to generate questions first.')
+            return
+        }
+        if (activeTab === 'ai' && questions.length === 0) {
+            toast.error('Please click "Generate Exam Content" first.')
             return
         }
 
@@ -123,8 +164,7 @@ export default function CreateExamPage() {
 
             let fileUrl = null
 
-            // If tab is upload and file exists, upload it
-            if (activeTab === 'upload' && file) {
+            if (file) {
                 const fileExt = file.name.split('.').pop()
                 const fileName = `${Date.now()}.${fileExt}`
                 const filePath = `${user.id}/${fileName}`
@@ -142,58 +182,36 @@ export default function CreateExamPage() {
                 fileUrl = publicUrl
             }
 
-            // If AI generated, we might want to save the JSON content instead of a file URL
-            // For this prototype, we'll store the JSON in the description or a new column if schema allowed
-            // But looking at schema, we have 'description'. Let's append the questions there for now
-            // OR we can save the JSON as a text file in storage!
-
-            if (activeTab === 'ai' && generatedExam) {
-                const jsonString = JSON.stringify(generatedExam, null, 2)
-                const fileName = `${Date.now()}_ai_exam.json`
-                const filePath = `${user.id}/${fileName}`
-                const blob = new Blob([jsonString], { type: 'application/json' })
-
-                const { error: uploadError } = await supabase.storage
-                    .from('exams')
-                    .upload(filePath, blob)
-
-                if (uploadError) throw uploadError
-
-                const { data: { publicUrl } } = supabase.storage
-                    .from('exams')
-                    .getPublicUrl(filePath)
-
-                fileUrl = publicUrl
-            }
-
-            // 2. Insert record
+            // Insert record
             const { error: insertError } = await supabase
                 .from('exams')
                 .insert({
                     title,
-                    description: activeTab === 'ai' ? description + '\n\n' + JSON.stringify(generatedExam) : description, // Fallback storage
+                    description,
                     class_id: classId,
                     due_date: new Date(dueDate).toISOString(),
                     created_by: user.id,
                     file_url: fileUrl,
-                    duration_minutes: duration ? parseInt(duration) : null
+                    duration_minutes: duration ? parseInt(duration) : null,
+                    questions: questions.length > 0 ? questions : null // JSONB
                 })
 
             if (insertError) throw insertError
 
-            alert('Exam created successfully!')
+            toast.success('Exam created successfully!')
             router.push('/instructor/dashboard')
+            router.refresh()
 
         } catch (error: any) {
             console.error('Error creating exam:', error)
-            alert('Error: ' + error.message)
+            toast.error('Error: ' + error.message)
         } finally {
             setLoading(false)
         }
     }
 
     return (
-        <div className="container mx-auto px-4 py-8 max-w-3xl">
+        <div className="container mx-auto px-4 py-8 max-w-3xl" suppressHydrationWarning>
             <Link href="/instructor/dashboard" className="flex items-center text-slate-500 hover:text-slate-900 mb-6 transition-colors">
                 <ArrowLeft size={18} className="mr-2" /> Back to Dashboard
             </Link>
@@ -212,56 +230,122 @@ export default function CreateExamPage() {
                         </div>
                     </button>
                     <button
+                        onClick={() => setActiveTab('parser')}
+                        className={`flex-1 py-4 text-sm font-medium transition-colors ${activeTab === 'parser' ? 'bg-emerald-50 text-emerald-600 border-b-2 border-emerald-600' : 'text-slate-500 hover:text-emerald-600'}`}
+                    >
+                        <div className="flex items-center justify-center gap-2">
+                            <FileText size={18} /> Import PDF
+                        </div>
+                    </button>
+                    <button
                         onClick={() => setActiveTab('ai')}
                         className={`flex-1 py-4 text-sm font-medium transition-colors ${activeTab === 'ai' ? 'bg-violet-50 text-violet-600 border-b-2 border-violet-600' : 'text-slate-500 hover:text-violet-600'}`}
                     >
                         <div className="flex items-center justify-center gap-2">
-                            <span className="bg-violet-200 text-violet-800 text-[10px] px-1.5 py-0.5 rounded-full">AI</span> Generate Exam
+                            <span className="bg-violet-200 text-violet-800 text-[10px] px-1.5 py-0.5 rounded-full">AI</span> Generate
                         </div>
                     </button>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-8 space-y-6">
 
+                    {activeTab === 'parser' && (
+                        <div className="bg-emerald-50 p-6 rounded-xl border border-emerald-100 mb-6">
+                            <h3 className="font-bold text-emerald-900 mb-4">📄 Rule-Based Parser (No AI)</h3>
+                            <div className="space-y-4">
+                                <p className="text-sm text-emerald-800">
+                                    Upload a PDF formatted with numbered questions and lettered options.<br />
+                                    Example:<br />
+                                    <span className="font-mono bg-white px-1 rounded">1. What is 2+2?</span><br />
+                                    <span className="font-mono bg-white px-1 rounded">A. 3</span><br />
+                                    <span className="font-mono bg-white px-1 rounded">B. 4</span>
+                                </p>
+                                <div>
+                                    <label className="block text-sm font-medium text-emerald-900 mb-1">1. Upload Questions PDF</label>
+                                    <input type="file" accept=".pdf" onChange={handleFileChange} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200" />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-emerald-900 mb-1">2. Upload Marking Scheme (Optional)</label>
+                                    <p className="text-xs text-emerald-700 mb-2">Upload a second PDF containing answers (e.g. "1. A", "2. B")</p>
+                                    <input type="file" accept=".pdf" onChange={handleAnswersFileChange} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200" />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleParserImport}
+                                    disabled={isGenerating}
+                                    className="w-full bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {isGenerating ? 'Parsing Questions & Answers...' : 'Import Exam'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
                     {activeTab === 'ai' && (
                         <div className="bg-violet-50 p-6 rounded-xl border border-violet-100 mb-6">
                             <h3 className="font-bold text-violet-900 mb-4">✨ AI Exam Generator</h3>
                             <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-violet-900 mb-1">Topic / Subject</label>
-                                    <input
-                                        type="text"
-                                        value={aiTopic}
-                                        onChange={(e) => setAiTopic(e.target.value)}
-                                        placeholder="e.g. European History, Calculus Integration"
-                                        className="w-full p-2 border border-violet-200 rounded focus:ring-violet-500 focus:border-violet-500"
-                                    />
-                                </div>
-                                <div className="text-center text-sm text-violet-600 font-medium">- OR -</div>
-                                <div>
-                                    <label className="block text-sm font-medium text-violet-900 mb-1">Upload Reference PDF (Optional)</label>
-                                    <input type="file" accept=".pdf" onChange={handleFileChange} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-100 file:text-violet-700 hover:file:bg-violet-200" />
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={handleAiGenerate}
-                                    disabled={isGenerating}
-                                    className="w-full bg-violet-600 text-white py-2 rounded-lg hover:bg-violet-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-                                >
-                                    {isGenerating ? 'Generating Questions...' : 'Generate Exam Content'}
-                                </button>
+                                {questions.length === 0 && (
+                                    <>
+                                        <div>
+                                            <label className="block text-sm font-medium text-violet-900 mb-1">Topic / Subject</label>
+                                            <input
+                                                type="text"
+                                                value={aiTopic}
+                                                onChange={(e) => setAiTopic(e.target.value)}
+                                                placeholder="e.g. European History, Calculus Integration"
+                                                className="w-full p-2 border border-violet-200 rounded focus:ring-violet-500 focus:border-violet-500"
+                                            />
+                                        </div>
+                                        <div className="text-center text-sm text-violet-600 font-medium">- OR -</div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-violet-900 mb-1">Upload Reference PDF (Optional)</label>
+                                            <input type="file" accept=".pdf" onChange={handleFileChange} className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-100 file:text-violet-700 hover:file:bg-violet-200" />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleAiGenerate}
+                                            disabled={isGenerating}
+                                            className="w-full bg-violet-600 text-white py-2 rounded-lg hover:bg-violet-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                                        >
+                                            {isGenerating ? 'Generating Questions...' : 'Generate Exam Content'}
+                                        </button>
+                                    </>
+                                )}
                             </div>
+                        </div>
+                    )}
 
-                            {generatedExam && (
-                                <div className="mt-6 bg-white p-4 rounded border border-violet-200">
-                                    <h4 className="font-bold text-slate-900 mb-2">Preview:</h4>
-                                    <ul className="list-disc pl-5 space-y-1 text-sm text-slate-600 max-h-40 overflow-y-auto">
-                                        {generatedExam.questions?.map((q: any, i: number) => (
-                                            <li key={i}>{q.question}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
+                    {(activeTab === 'ai' || activeTab === 'parser') && questions.length > 0 && (
+                        <div className="mb-6 bg-white p-4 rounded border border-slate-200 shadow-sm">
+                            <div className="flex justify-between items-center mb-2">
+                                <h4 className="font-bold text-slate-900">Preview ({questions.length} Questions):</h4>
+                                <button type="button" onClick={() => setQuestions([])} className="text-xs text-red-500 underline">Clear</button>
+                            </div>
+                            <ul className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                                {questions.map((q: any, i: number) => (
+                                    <li key={i} className="bg-slate-50 p-3 rounded text-sm border border-slate-100 relative group">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeleteQuestion(i)}
+                                            className="absolute top-2 right-2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            title="Remove Question"
+                                        >
+                                            <div className="bg-white rounded-full p-1 shadow-sm border border-red-100">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
+                                            </div>
+                                        </button>
+                                        <p className="font-medium text-slate-800 pr-6">{i + 1}. {q.text || q.question}</p>
+                                        <div className="grid grid-cols-2 gap-2 mt-2">
+                                            {q.options?.map((opt: string, idx: number) => (
+                                                <div key={idx} className={`text-xs px-2 py-1 rounded ${opt === q.correctAnswer ? 'bg-emerald-100 text-emerald-800 font-medium' : 'bg-white text-slate-600 border border-slate-200'}`}>
+                                                    {opt}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
                     )}
 
