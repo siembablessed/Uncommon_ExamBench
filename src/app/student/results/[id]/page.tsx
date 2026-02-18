@@ -53,10 +53,24 @@ export default function ExamResultsPage() {
                     .eq('id', params.id)
                     .single()
 
-                if (error) throw error
+                if (error) {
+                    console.error('Supabase Error:', error)
+                    throw error
+                }
 
                 if (submissionData) {
                     const examData = Array.isArray(submissionData.exams) ? submissionData.exams[0] : submissionData.exams
+
+                    const safeParse = (data: any, fallback: any = {}) => {
+                        if (!data) return fallback
+                        if (typeof data === 'object') return data
+                        try {
+                            return JSON.parse(data)
+                        } catch (e) {
+                            console.warn('JSON Parse Error:', e, data)
+                            return fallback
+                        }
+                    }
 
                     setData({
                         submission: {
@@ -64,24 +78,19 @@ export default function ExamResultsPage() {
                             grade: submissionData.grade,
                             status: submissionData.status,
                             submitted_at: submissionData.submitted_at,
-                            content: typeof submissionData.content === 'string'
-                                ? JSON.parse(submissionData.content)
-                                : submissionData.content || {},
-                            feedback: typeof submissionData.feedback === 'string'
-                                ? JSON.parse(submissionData.feedback)
-                                : submissionData.feedback
+                            content: safeParse(submissionData.content, {}),
+                            feedback: safeParse(submissionData.feedback, null)
                         },
                         exam: {
-                            title: examData?.title,
-                            description: examData?.description,
-                            questions: typeof examData?.questions === 'string'
-                                ? JSON.parse(examData?.questions)
-                                : examData?.questions || []
+                            title: examData?.title || 'Unknown Exam',
+                            description: examData?.description || '',
+                            questions: safeParse(examData?.questions, [])
                         }
                     })
                 }
             } catch (err) {
                 console.error('Error fetching results:', err)
+                // Don't leave user in loading state, show error
             } finally {
                 setLoading(false)
             }
@@ -99,6 +108,7 @@ export default function ExamResultsPage() {
     if (!data) return (
         <div className="container mx-auto px-6 py-12 text-center">
             <h1 className="text-2xl font-bold text-slate-900 mb-4">Results Not Found</h1>
+            <p className="text-slate-500 mb-6">We couldn't load the results for this exam. It might have been deleted or you don't have permission to view it.</p>
             <Link href="/student/dashboard" className="text-indigo-600 hover:dashed">Back to Dashboard</Link>
         </div>
     )
@@ -126,7 +136,7 @@ export default function ExamResultsPage() {
                                         {isPass ? 'Passed' : 'Needs Improvement'}
                                     </span>
                                     <span className="text-slate-500 flex items-center gap-1">
-                                        <Clock size={14} /> Submitted on {new Date(submission.submitted_at).toLocaleDateString()}
+                                        <Clock size={14} /> Submitted on {submission.submitted_at ? new Date(submission.submitted_at).toLocaleDateString() : 'N/A'}
                                     </span>
                                 </div>
                             </div>
@@ -146,64 +156,70 @@ export default function ExamResultsPage() {
                         <FileText size={20} className="text-indigo-600" /> Exam Review
                     </h2>
 
-                    {exam.questions.map((question, index) => {
-                        const studentAnswer = submission.content[question.id]
-                        const isCorrect = studentAnswer === question.correctAnswer
+                    {exam.questions.length === 0 ? (
+                        <div className="bg-white p-8 rounded-xl border border-slate-200 text-center text-slate-500">
+                            No questions found for this exam.
+                        </div>
+                    ) : (
+                        exam.questions.map((question, index) => {
+                            const studentAnswer = submission.content[question.id]
+                            const isCorrect = studentAnswer === question.correctAnswer
 
-                        return (
-                            <div key={question.id} className={`bg-white rounded-xl shadow-sm border p-6 ${isCorrect ? 'border-emerald-100' : 'border-red-100'
-                                }`}>
-                                <div className="flex items-start gap-4">
-                                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                                        }`}>
-                                        {index + 1}
-                                    </div>
-                                    <div className="flex-1">
-                                        <div className="flex justify-between items-start mb-4">
-                                            <h3 className="text-lg font-medium text-slate-900">{question.text}</h3>
-                                            <span className={`text-xs font-bold px-2 py-1 rounded ${isCorrect ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
-                                                }`}>
-                                                {isCorrect ? 'Correct' : 'Incorrect'}
-                                            </span>
+                            return (
+                                <div key={question.id} className={`bg-white rounded-xl shadow-sm border p-6 ${isCorrect ? 'border-emerald-100' : 'border-red-100'
+                                    }`}>
+                                    <div className="flex items-start gap-4">
+                                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                                            }`}>
+                                            {index + 1}
                                         </div>
+                                        <div className="flex-1">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <h3 className="text-lg font-medium text-slate-900">{question.text}</h3>
+                                                <span className={`text-xs font-bold px-2 py-1 rounded ${isCorrect ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+                                                    }`}>
+                                                    {isCorrect ? 'Correct' : 'Incorrect'}
+                                                </span>
+                                            </div>
 
-                                        <div className="space-y-3">
-                                            {question.options.map((option) => {
-                                                const isSelected = option === studentAnswer
-                                                const isTheCorrectAnswer = option === question.correctAnswer
+                                            <div className="space-y-3">
+                                                {question.options.map((option) => {
+                                                    const isSelected = option === studentAnswer
+                                                    const isTheCorrectAnswer = option === question.correctAnswer
 
-                                                let optionClass = "p-3 rounded-lg border text-sm flex justify-between items-center "
+                                                    let optionClass = "p-3 rounded-lg border text-sm flex justify-between items-center "
 
-                                                if (isSelected && isTheCorrectAnswer) {
-                                                    optionClass += "bg-emerald-50 border-emerald-200 text-emerald-800 font-medium"
-                                                } else if (isSelected && !isTheCorrectAnswer) {
-                                                    optionClass += "bg-red-50 border-red-200 text-red-800 font-medium"
-                                                } else if (!isSelected && isTheCorrectAnswer) {
-                                                    optionClass += "bg-emerald-50/50 border-emerald-100/50 text-emerald-600 border-dashed"
-                                                } else {
-                                                    optionClass += "bg-white border-slate-100 text-slate-600"
-                                                }
+                                                    if (isSelected && isTheCorrectAnswer) {
+                                                        optionClass += "bg-emerald-50 border-emerald-200 text-emerald-800 font-medium"
+                                                    } else if (isSelected && !isTheCorrectAnswer) {
+                                                        optionClass += "bg-red-50 border-red-200 text-red-800 font-medium"
+                                                    } else if (!isSelected && isTheCorrectAnswer) {
+                                                        optionClass += "bg-emerald-50/50 border-emerald-100/50 text-emerald-600 border-dashed"
+                                                    } else {
+                                                        optionClass += "bg-white border-slate-100 text-slate-600"
+                                                    }
 
-                                                return (
-                                                    <div key={option} className={optionClass}>
-                                                        <span>{option}</span>
-                                                        {isSelected && (
-                                                            <span className="text-xs font-bold">Your Answer</span>
-                                                        )}
-                                                        {!isSelected && isTheCorrectAnswer && (
-                                                            <span className="text-xs font-medium flex items-center gap-1">
-                                                                <CheckCircle size={12} /> Correct Answer
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                )
-                                            })}
+                                                    return (
+                                                        <div key={option} className={optionClass}>
+                                                            <span>{option}</span>
+                                                            {isSelected && (
+                                                                <span className="text-xs font-bold">Your Answer</span>
+                                                            )}
+                                                            {!isSelected && isTheCorrectAnswer && (
+                                                                <span className="text-xs font-medium flex items-center gap-1">
+                                                                    <CheckCircle size={12} /> Correct Answer
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        )
-                    })}
+                            )
+                        })
+                    )}
                 </div>
 
                 {/* AI Feedback Section (Optional, if exists) */}
