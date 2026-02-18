@@ -7,7 +7,7 @@ import { ClassItem, ExamItem, SubmissionItem } from '@/types'
 import StudentStatsCards from '@/components/dashboard/StudentStatsCards'
 import StudentExamsList from '@/components/dashboard/StudentExamsList'
 import EnrolledClassesList from '@/components/dashboard/EnrolledClassesList'
-import OnlineUsersList from '@/components/OnlineUsersList'
+
 
 export default function StudentDashboard() {
     const [exams, setExams] = useState<ExamItem[]>([])
@@ -152,12 +152,9 @@ export default function StudentDashboard() {
                     />
                 </div>
 
-                {/* Sidebar: Classes & Online Users */}
+                {/* Sidebar: Classes */}
                 <div className="space-y-6">
                     <EnrolledClassesList classes={classes} />
-                    <div className="h-[400px]">
-                        <OnlineUsersList />
-                    </div>
                 </div>
             </div>
         </div>

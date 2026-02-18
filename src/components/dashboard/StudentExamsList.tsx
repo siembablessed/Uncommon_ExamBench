@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { FileText, Clock, PlayCircle, CheckCircle, ArrowRight, AlertCircle, Calendar } from 'lucide-react'
 import { ExamItem, SubmissionItem } from '@/types'
 
@@ -116,8 +117,22 @@ function EmptyState({ icon, message }: { icon: React.ReactNode, message: string 
 }
 
 function ExamCard({ exam, status, submission }: { exam: ExamItem, status: 'active' | 'missed' | 'completed', submission?: SubmissionItem }) {
+    const router = useRouter()
+
+    const handleClick = () => {
+        if (status === 'active') {
+            router.push(`/student/exams/${exam.id}`)
+        } else if (status === 'completed' && submission) {
+            router.push(`/student/results/${submission.id}`)
+        }
+    }
+
     return (
-        <div className="group bg-white border border-slate-100 rounded-xl p-5 hover:shadow-md transition-all duration-300 hover:border-indigo-100 relative overflow-hidden">
+        <div
+            onClick={handleClick}
+            className={`group bg-white border border-slate-100 rounded-xl p-5 hover:shadow-md transition-all duration-300 hover:border-indigo-100 relative overflow-hidden ${(status === 'active' || status === 'completed') ? 'cursor-pointer' : ''
+                }`}
+        >
             <div className={`absolute left-0 top-0 bottom-0 w-1 ${status === 'missed' ? 'bg-red-500' : status === 'completed' ? 'bg-emerald-500' : 'bg-indigo-500'
                 }`}></div>
 
@@ -130,8 +145,8 @@ function ExamCard({ exam, status, submission }: { exam: ExamItem, status: 'activ
                         <span className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100">
                             <Calendar size={14} className="text-slate-400" />
                             {status === 'completed' && submission
-                                ? `Submitted: ${new Date(submission.created_at).toLocaleDateString()}`
-                                : `Due: ${new Date(exam.due_date).toLocaleDateString()}`
+                                ? `Submitted: ${new Date(submission.submitted_at || submission.created_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}`
+                                : `Due: ${new Date(exam.due_date).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}`
                             }
                         </span>
                         {status === 'active' && (
@@ -144,12 +159,9 @@ function ExamCard({ exam, status, submission }: { exam: ExamItem, status: 'activ
                 </div>
 
                 {status === 'active' && (
-                    <Link
-                        href={`/student/exams/${exam.id}`}
-                        className="btn-primary flex items-center gap-2 shadow-sm shadow-indigo-200"
-                    >
+                    <div className="btn-primary flex items-center gap-2 shadow-sm shadow-indigo-200">
                         Start Exam <PlayCircle size={16} />
-                    </Link>
+                    </div>
                 )}
 
                 {status === 'completed' && submission && (
@@ -157,16 +169,14 @@ function ExamCard({ exam, status, submission }: { exam: ExamItem, status: 'activ
                         <div className="text-right">
                             <div className="text-[10px] uppercase tracking-wider font-bold text-slate-400">Grade</div>
                             <div className={`text-xl font-bold ${submission.grade !== null && submission.grade >= 80 ? 'text-emerald-600' :
-                                    submission.grade !== null && submission.grade >= 50 ? 'text-indigo-600' : 'text-slate-600'
+                                submission.grade !== null && submission.grade >= 50 ? 'text-indigo-600' : 'text-slate-600'
                                 }`}>
                                 {submission.grade !== null ? `${submission.grade}%` : 'Pending'}
                             </div>
                         </div>
-                        {submission.grade !== null && (
-                            <Link href={`/student/results/${submission.id}`} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                                <ArrowRight size={20} />
-                            </Link>
-                        )}
+                        <div className="p-2 text-slate-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 rounded-lg transition-colors">
+                            <ArrowRight size={20} />
+                        </div>
                     </div>
                 )}
                 {status === 'missed' && (

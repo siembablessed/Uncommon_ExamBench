@@ -3,8 +3,16 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { ArrowLeft, CheckCircle, XCircle, Clock, FileText } from 'lucide-react'
+import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
+
+interface Question {
+    id: string
+    text: string
+    options: string[]
+    correctAnswer: string
+    points: number
+}
 
 interface ResultsData {
     submission: {
@@ -12,13 +20,13 @@ interface ResultsData {
         grade: number
         status: string
         submitted_at: string
-        content: any // JSON answers
-        feedback: any // JSON feedback from AI/Instructor
+        content: Record<string, string> // Map of questionId -> selectedOption
+        feedback: any
     }
     exam: {
         title: string
         description: string
-        total_questions: number
+        questions: Question[]
     }
 }
 
@@ -33,12 +41,14 @@ export default function ExamResultsPage() {
             if (!params.id) return
 
             try {
-                // Fetch submission with exam details
+                // Fetch submission with exam details AND questions
+                // Note: We assume questions are stored in the 'questions' column of the 'exams' table based on typical pattern here.
+                // If strictly relational, we'd adjust. But previous context suggests JSON or simple structure.
                 const { data: submissionData, error } = await supabase
                     .from('submissions')
                     .select(`
                         id, grade, status, submitted_at, content, feedback,
-                        exams (title, description)
+                        exams (title, description, questions)
                     `)
                     .eq('id', params.id)
                     .single()
@@ -46,6 +56,8 @@ export default function ExamResultsPage() {
                 if (error) throw error
 
                 if (submissionData) {
+                    const examData = Array.isArray(submissionData.exams) ? submissionData.exams[0] : submissionData.exams
+
                     setData({
                         submission: {
                             id: submissionData.id,
@@ -54,15 +66,17 @@ export default function ExamResultsPage() {
                             submitted_at: submissionData.submitted_at,
                             content: typeof submissionData.content === 'string'
                                 ? JSON.parse(submissionData.content)
-                                : submissionData.content,
+                                : submissionData.content || {},
                             feedback: typeof submissionData.feedback === 'string'
                                 ? JSON.parse(submissionData.feedback)
                                 : submissionData.feedback
                         },
                         exam: {
-                            title: Array.isArray(submissionData.exams) ? (submissionData.exams[0] as any)?.title : (submissionData.exams as any)?.title,
-                            description: Array.isArray(submissionData.exams) ? (submissionData.exams[0] as any)?.description : (submissionData.exams as any)?.description,
-                            total_questions: 0 // We'll calculate this from content if possible
+                            title: examData?.title,
+                            description: examData?.description,
+                            questions: typeof examData?.questions === 'string'
+                                ? JSON.parse(examData?.questions)
+                                : examData?.questions || []
                         }
                     })
                 }
@@ -99,12 +113,13 @@ export default function ExamResultsPage() {
                     <ArrowLeft size={20} /> Back to Dashboard
                 </Link>
 
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
                     {/* Header: Score and Status */}
                     <div className={`p-8 ${isPass ? 'bg-emerald-50 border-b border-emerald-100' : 'bg-red-50 border-b border-red-100'}`}>
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                             <div>
                                 <h1 className="text-3xl font-bold text-slate-900 mb-2">{exam.title}</h1>
+                                <p className="text-slate-600 mb-4">{exam.description}</p>
                                 <div className="flex items-center gap-4 text-sm">
                                     <span className={`flex items-center gap-1 font-medium ${isPass ? 'text-emerald-700' : 'text-red-700'}`}>
                                         {isPass ? <CheckCircle size={16} /> : <XCircle size={16} />}
@@ -123,46 +138,91 @@ export default function ExamResultsPage() {
                             </div>
                         </div>
                     </div>
-
-                    {/* Detailed Feedback */}
-                    <div className="p-8">
-                        <h2 className="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2">
-                            <FileText size={20} className="text-indigo-600" /> Assessment Feedback
-                        </h2>
-
-                        {submission.feedback ? (
-                            <div className="space-y-6">
-                                {/* If feedback is structured (e.g. from AI) */}
-                                {Array.isArray(submission.feedback) ? (
-                                    submission.feedback.map((item: any, idx: number) => (
-                                        <div key={idx} className="p-4 rounded-lg bg-slate-50 border border-slate-100">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <h3 className="font-semibold text-slate-900">Question {idx + 1}</h3>
-                                                <span className={`text-xs font-bold px-2 py-1 rounded ${item.correct ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                                    {item.correct ? 'Correct' : 'Incorrect'}
-                                                </span>
-                                            </div>
-                                            <p className="text-slate-700 mb-2">{item.question}</p>
-                                            <div className="text-sm bg-white p-3 rounded border border-slate-200 text-slate-600">
-                                                <span className="font-semibold text-slate-900">Feedback: </span>
-                                                {item.feedback}
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    // Plain text feedback
-                                    <div className="prose text-slate-700">
-                                        <p>{JSON.stringify(submission.feedback, null, 2)}</p>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-300">
-                                <p className="text-slate-500">No detailed feedback available for this submission.</p>
-                            </div>
-                        )}
-                    </div>
                 </div>
+
+                {/* Review Section */}
+                <div className="space-y-6">
+                    <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                        <FileText size={20} className="text-indigo-600" /> Exam Review
+                    </h2>
+
+                    {exam.questions.map((question, index) => {
+                        const studentAnswer = submission.content[question.id]
+                        const isCorrect = studentAnswer === question.correctAnswer
+
+                        return (
+                            <div key={question.id} className={`bg-white rounded-xl shadow-sm border p-6 ${isCorrect ? 'border-emerald-100' : 'border-red-100'
+                                }`}>
+                                <div className="flex items-start gap-4">
+                                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                                        }`}>
+                                        {index + 1}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <h3 className="text-lg font-medium text-slate-900">{question.text}</h3>
+                                            <span className={`text-xs font-bold px-2 py-1 rounded ${isCorrect ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+                                                }`}>
+                                                {isCorrect ? 'Correct' : 'Incorrect'}
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            {question.options.map((option) => {
+                                                const isSelected = option === studentAnswer
+                                                const isTheCorrectAnswer = option === question.correctAnswer
+
+                                                let optionClass = "p-3 rounded-lg border text-sm flex justify-between items-center "
+
+                                                if (isSelected && isTheCorrectAnswer) {
+                                                    optionClass += "bg-emerald-50 border-emerald-200 text-emerald-800 font-medium"
+                                                } else if (isSelected && !isTheCorrectAnswer) {
+                                                    optionClass += "bg-red-50 border-red-200 text-red-800 font-medium"
+                                                } else if (!isSelected && isTheCorrectAnswer) {
+                                                    optionClass += "bg-emerald-50/50 border-emerald-100/50 text-emerald-600 border-dashed"
+                                                } else {
+                                                    optionClass += "bg-white border-slate-100 text-slate-600"
+                                                }
+
+                                                return (
+                                                    <div key={option} className={optionClass}>
+                                                        <span>{option}</span>
+                                                        {isSelected && (
+                                                            <span className="text-xs font-bold">Your Answer</span>
+                                                        )}
+                                                        {!isSelected && isTheCorrectAnswer && (
+                                                            <span className="text-xs font-medium flex items-center gap-1">
+                                                                <CheckCircle size={12} /> Correct Answer
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+
+                {/* AI Feedback Section (Optional, if exists) */}
+                {submission.feedback && (
+                    <div className="mt-8 bg-indigo-50 rounded-2xl p-6 border border-indigo-100">
+                        <h3 className="font-bold text-indigo-900 mb-3 flex items-center gap-2">
+                            <AlertCircle size={18} /> Additional Feedback
+                        </h3>
+                        <div className="prose prose-sm text-indigo-800">
+                            {/* Handle string or object feedback */}
+                            {typeof submission.feedback === 'string'
+                                ? submission.feedback
+                                : Array.isArray(submission.feedback)
+                                    ? "See detailed breakdown above."
+                                    : JSON.stringify(submission.feedback)
+                            }
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )

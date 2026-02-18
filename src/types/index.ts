@@ -30,6 +30,9 @@ export interface SubmissionItem {
     created_at: string
     exam_id?: string
     student_id?: string
+    content?: any
+    feedback?: any
+    submitted_at?: string
 }
 
 export interface UserProfile {

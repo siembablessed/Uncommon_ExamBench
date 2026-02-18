@@ -167,44 +167,35 @@ export default function InstructorDashboard() {
                     />
 
                     {/* Main Content Grid */}
-                    <div className="grid lg:grid-cols-3 gap-8">
-                        {/* Left Column: Classes and Exams (Span 2) */}
-                        <div className="lg:col-span-2 space-y-6">
-                            {showCreateClass && (
-                                <CreateClassModal
-                                    newClassName={newClassName}
-                                    setNewClassName={setNewClassName}
-                                    handleCreateClass={handleCreateClass}
-                                    onCancel={() => setShowCreateClass(false)}
-                                />
-                            )}
+                    {/* Main Content Grid */}
+                    <div className="space-y-6">
+                        {showCreateClass && (
+                            <CreateClassModal
+                                newClassName={newClassName}
+                                setNewClassName={setNewClassName}
+                                handleCreateClass={handleCreateClass}
+                                onCancel={() => setShowCreateClass(false)}
+                            />
+                        )}
 
-                            <div className="flex items-center justify-between mb-2">
-                                <h2 className="text-xl font-bold text-slate-900">Your Resources</h2>
-                                <button
-                                    onClick={() => setShowCreateClass(!showCreateClass)}
-                                    className="flex items-center gap-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors shadow-sm hover:shadow active:scale-95 duration-200"
-                                >
-                                    <PlusCircle size={18} /> Create Class
-                                </button>
-                            </div>
-
-                            <div className="grid md:grid-cols-2 gap-6 h-[500px]">
-                                <ClassesList classes={classes} />
-                                <ExamsList exams={exams} />
-                            </div>
+                        <div className="flex items-center justify-between mb-2">
+                            <h2 className="text-xl font-bold text-slate-900">Your Resources</h2>
+                            <button
+                                onClick={() => setShowCreateClass(!showCreateClass)}
+                                className="flex items-center gap-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors shadow-sm hover:shadow active:scale-95 duration-200"
+                            >
+                                <PlusCircle size={18} /> Create Class
+                            </button>
                         </div>
 
-                        {/* Right Sidebar: Activity (Span 1) */}
-                        <div className="space-y-6">
-                            <div className="flex items-center justify-between mb-2 h-[42px]"> {/* h-[42px] aligns with the button height */}
-                                <h2 className="text-xl font-bold text-slate-900">Activity</h2>
-                            </div>
-                            <div className="h-[500px]">
-                                <OnlineUsersList />
-                            </div>
+                        <div className="grid md:grid-cols-2 gap-6 h-[500px]">
+                            <ClassesList classes={classes} />
+                            <ExamsList exams={exams} />
                         </div>
                     </div>
+
+                    {/* Fixed Position Live Activity Pill */}
+                    <OnlineUsersList />
                 </div>
             ) : (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
