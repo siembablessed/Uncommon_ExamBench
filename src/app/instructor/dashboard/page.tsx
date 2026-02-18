@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { PlusCircle, MapPin } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 import OnlineUsersList from '@/components/OnlineUsersList'
 import StudentDirectory from '@/components/dashboard/StudentDirectory'
 import StatsCards from '@/components/dashboard/StatsCards'
@@ -178,18 +178,11 @@ export default function InstructorDashboard() {
                             />
                         )}
 
-                        <div className="flex items-center justify-between mb-2">
-                            <h2 className="text-xl font-bold text-slate-900">Your Resources</h2>
-                            <button
-                                onClick={() => setShowCreateClass(!showCreateClass)}
-                                className="flex items-center gap-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg transition-colors shadow-sm hover:shadow active:scale-95 duration-200"
-                            >
-                                <PlusCircle size={18} /> Create Class
-                            </button>
-                        </div>
-
                         <div className="grid md:grid-cols-2 gap-6 h-[500px]">
-                            <ClassesList classes={classes} />
+                            <ClassesList
+                                classes={classes}
+                                onCreateClass={() => setShowCreateClass(true)}
+                            />
                             <ExamsList exams={exams} />
                         </div>
                     </div>

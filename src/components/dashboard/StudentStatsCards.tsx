@@ -16,7 +16,7 @@ export default function StudentStatsCards({ avgGrade, pending, missed, completed
                     <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl w-fit mb-4 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
                         <TrendingUp size={24} />
                     </div>
-                    <div className="text-3xl font-bold text-slate-900 mb-1">{avgGrade}%</div>
+                    <div className="text-3xl font-bold text-slate-900 mb-1">{typeof avgGrade === 'number' ? avgGrade.toFixed(1) : avgGrade}%</div>
                     <div className="text-sm font-medium text-slate-500">Average Grade</div>
                 </div>
                 <div className="absolute -bottom-4 -right-4 text-emerald-50 opacity-50 transform rotate-12 group-hover:scale-110 transition-transform duration-500">

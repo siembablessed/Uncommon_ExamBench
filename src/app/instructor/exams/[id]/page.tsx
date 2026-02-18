@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, User, FileText, CheckCircle, Clock } from 'lucide-react'
+import { ArrowLeft, User, FileText, CheckCircle, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
 
 // Mocking use object for now if type issues, but keeping it clean
 interface Submission {
@@ -84,9 +84,24 @@ export default function ExamDetailInstructorPage() {
         }
     }
 
+    const [currentPage, setCurrentPage] = useState(1)
+    const [itemsPerPage, setItemsPerPage] = useState(5)
+
+    // Pagination Logic
+    const indexOfLastItem = currentPage * itemsPerPage
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage
+    const currentSubmissions = submissions.slice(indexOfFirstItem, indexOfLastItem)
+    const totalPages = Math.ceil(submissions.length / itemsPerPage)
+
+    const handlePageChange = (page: number) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page)
+        }
+    }
+
     if (loading) return (
-        <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="flex items-center justify-center min-h-[calc(100vh-64px)]" suppressHydrationWarning>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" suppressHydrationWarning></div>
         </div>
     )
     if (!exam) return <div className="p-8 text-center">Exam not found.</div>
@@ -115,86 +130,137 @@ export default function ExamDetailInstructorPage() {
                 </div>
             </div>
 
-            <h2 className="text-xl font-bold text-slate-900 mb-4">Student Submissions</h2>
+            <div className="flex flex-col md:flex-row justify-between items-end md:items-center mb-4 gap-4">
+                <h2 className="text-xl font-bold text-slate-900">Student Submissions</h2>
+
+                {/* Entries Selector */}
+                <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <span>Show</span>
+                    <select
+                        value={itemsPerPage}
+                        onChange={(e) => {
+                            setItemsPerPage(Number(e.target.value))
+                            setCurrentPage(1) // Reset to first page
+                        }}
+                        className="bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-1.5"
+                    >
+                        <option value={5}>5</option>
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                    </select>
+                    <span>entries</span>
+                </div>
+            </div>
 
             <div className="card p-0 overflow-hidden">
-                <table className="min-w-full divide-y divide-slate-100">
-                    <thead className="bg-slate-50">
-                        <tr>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Student</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Submitted At</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Content</th>
-                            <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Grade</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-slate-100">
-                        {submissions.map((sub) => (
-                            <tr key={sub.id} className="hover:bg-slate-50 transition-colors">
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="flex items-center">
-                                        <div className="bg-indigo-100 p-1.5 rounded-full mr-3 text-indigo-600">
-                                            <User size={16} />
-                                        </div>
-                                        <span className="font-medium text-slate-900">{sub.student.full_name}</span>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                                    {new Date(sub.submitted_at).toLocaleString()}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${sub.status === 'graded'
-                                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                        : 'bg-amber-100 text-amber-800 border border-amber-200'
-                                        }`}>
-                                        {sub.status}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-600 font-medium">
-                                    {sub.content?.startsWith('http') ? (
-                                        <a href={sub.content} target="_blank" className="hover:underline flex items-center gap-1">
-                                            <FileText size={14} /> View File
-                                        </a>
-                                    ) : (
-                                        <span className="text-slate-500 italic font-normal" title={sub.content}>
-                                            {sub.content ? (sub.content.length > 30 ? sub.content.substring(0, 30) + '...' : sub.content) : 'No content'}
-                                        </span>
-                                    )}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-mono flex items-center gap-2">
-                                    {sub.grade !== null ? (
-                                        <span className="font-bold">{sub.grade}%</span>
-                                    ) : (
-                                        <span className="text-slate-400">-</span>
-                                    )}
-                                    <Link
-                                        href={`/instructor/exams/${examId}/submissions/${sub.id}`}
-                                        className="btn-secondary text-xs py-1 px-3 ml-2"
-                                    >
-                                        Review
-                                    </Link>
-                                    {sub.status !== 'graded' && sub.content && !sub.content.startsWith('http') && (
-                                        <AutoGradeButton
-                                            submission={sub}
-                                            examTitle={exam.title}
-                                            onGraded={(grade) => {
-                                                // Optimistic update
-                                                setSubmissions(prev => prev.map(s => s.id === sub.id ? { ...s, grade, status: 'graded' } : s))
-                                            }}
-                                        />
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                        {submissions.length === 0 && (
+                <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-slate-100 relative">
+                        <thead className="bg-slate-50">
                             <tr>
-                                <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
-                                    No submissions yet.
-                                </td>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Student</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Submitted At</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Content</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Grade</th>
                             </tr>
-                        )}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-slate-100">
+                            {currentSubmissions.map((sub) => (
+                                <tr key={sub.id} className="hover:bg-slate-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center">
+                                            <div className="bg-indigo-100 p-1.5 rounded-full mr-3 text-indigo-600">
+                                                <User size={16} />
+                                            </div>
+                                            <span className="font-medium text-slate-900">{sub.student.full_name}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                                        {new Date(sub.submitted_at).toLocaleString()}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <span className={`px-2.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${sub.status === 'graded'
+                                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                            : 'bg-amber-100 text-amber-800 border border-amber-200'
+                                            }`}>
+                                            {sub.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-indigo-600 font-medium">
+                                        {sub.content?.startsWith('http') ? (
+                                            <a href={sub.content} target="_blank" className="hover:underline flex items-center gap-1">
+                                                <FileText size={14} /> View File
+                                            </a>
+                                        ) : (
+                                            <span className="text-slate-500 italic font-normal" title={sub.content}>
+                                                {sub.content ? (sub.content.length > 30 ? sub.content.substring(0, 30) + '...' : sub.content) : 'No content'}
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500 font-mono flex items-center gap-2">
+                                        {sub.grade !== null ? (
+                                            <span className="font-bold">{sub.grade}%</span>
+                                        ) : (
+                                            <span className="text-slate-400">-</span>
+                                        )}
+                                        <Link
+                                            href={`/instructor/exams/${examId}/submissions/${sub.id}`}
+                                            className="btn-secondary text-xs py-1 px-3 ml-2"
+                                        >
+                                            Review
+                                        </Link>
+                                        {sub.status !== 'graded' && sub.content && !sub.content.startsWith('http') && (
+                                            <AutoGradeButton
+                                                submission={sub}
+                                                examTitle={exam.title}
+                                                onGraded={(grade) => {
+                                                    // Optimistic update
+                                                    setSubmissions(prev => prev.map(s => s.id === sub.id ? { ...s, grade, status: 'graded' } : s))
+                                                }}
+                                            />
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                            {submissions.length === 0 && (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                                        No submissions yet.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Pagination Controls */}
+                {submissions.length > 0 && (
+                    <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-white">
+                        <div className="text-sm text-slate-500">
+                            Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to <span className="font-medium">{Math.min(indexOfLastItem, submissions.length)}</span> of <span className="font-medium">{submissions.length}</span> results
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage === 1}
+                                className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+                            <span className="text-sm font-medium text-slate-700 px-2">
+                                Page {currentPage} of {totalPages}
+                            </span>
+                            <button
+                                onClick={() => handlePageChange(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                                className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )

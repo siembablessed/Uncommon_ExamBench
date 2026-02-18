@@ -150,7 +150,8 @@ export default function StudentExamPage() {
                         correctCount++
                     }
                 })
-                submission.grade = (correctCount / exam.questions.length) * 100
+                const percentage = (correctCount / exam.questions.length) * 100
+                submission.grade = parseFloat(percentage.toFixed(1))
                 submission.status = 'graded' // Mark as graded if auto-graded
             } else {
                 submission.grade = null // Awaiting manual marking

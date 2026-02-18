@@ -4,9 +4,10 @@ import { ClassItem } from '@/types'
 
 interface ClassesListProps {
     classes: ClassItem[]
+    onCreateClass: () => void
 }
 
-export default function ClassesList({ classes }: ClassesListProps) {
+export default function ClassesList({ classes, onCreateClass }: ClassesListProps) {
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-full">
             <div className="p-5 border-b border-slate-100 flex items-center justify-between">
@@ -16,7 +17,13 @@ export default function ClassesList({ classes }: ClassesListProps) {
                     </div>
                     Your Classes
                 </h2>
-                {/* Optional: Add 'View All' or 'Add' button here if needed in future */}
+                <button
+                    onClick={onCreateClass}
+                    className="flex items-center gap-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-lg transition-colors shadow-sm hover:shadow active:scale-95"
+                >
+                    <Plus size={14} />
+                    Create
+                </button>
             </div>
 
             <div className="p-4 flex-1">

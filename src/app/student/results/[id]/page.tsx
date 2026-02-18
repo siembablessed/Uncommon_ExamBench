@@ -147,7 +147,7 @@ export default function ExamResultsPage() {
                             </div>
                             <div className="text-center bg-white p-4 rounded-xl shadow-sm border border-slate-100 min-w-[120px]">
                                 <div className={`text-4xl font-extrabold ${isPass ? 'text-emerald-600' : 'text-red-600'}`}>
-                                    {submission.grade}%
+                                    {submission.grade?.toFixed(1)}%
                                 </div>
                                 <div className="text-xs text-slate-500 font-medium uppercase tracking-wider mt-1">Final Score</div>
                             </div>
