@@ -47,7 +47,7 @@ export default function ExamResultsPage() {
                 const { data: submissionData, error } = await supabase
                     .from('submissions')
                     .select(`
-                        id, grade, status, submitted_at, content, feedback,
+                        id, grade, status, submitted_at, answers, content, feedback,
                         exams (title, description, questions)
                     `)
                     .eq('id', params.id)
@@ -72,13 +72,18 @@ export default function ExamResultsPage() {
                         }
                     }
 
+                    // Handle legacy 'content' vs new 'answers' column
+                    // StudentExamPage writes to 'answers' keyed by index
+                    const rawAnswers = submissionData.answers || submissionData.content
+                    const parsedAnswers = safeParse(rawAnswers, {})
+
                     setData({
                         submission: {
                             id: submissionData.id,
                             grade: submissionData.grade,
                             status: submissionData.status,
                             submitted_at: submissionData.submitted_at,
-                            content: safeParse(submissionData.content, {}),
+                            content: parsedAnswers,
                             feedback: safeParse(submissionData.feedback, null)
                         },
                         exam: {
@@ -162,7 +167,9 @@ export default function ExamResultsPage() {
                         </div>
                     ) : (
                         exam.questions.map((question, index) => {
-                            const studentAnswer = submission.content[question.id]
+                            // Try lookup by ID first, then by index
+                            // StudentExamPage saves by index (as number keys in JSON)
+                            const studentAnswer = submission.content[question.id] || submission.content[index.toString()] || submission.content[index]
                             const isCorrect = studentAnswer === question.correctAnswer
 
                             return (
