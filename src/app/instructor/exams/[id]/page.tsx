@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, User, FileText, CheckCircle, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, User, FileText, CheckCircle, Clock, ChevronLeft, ChevronRight, Search, Filter } from 'lucide-react'
 
 // Mocking use object for now if type issues, but keeping it clean
 interface Submission {
@@ -86,12 +86,28 @@ export default function ExamDetailInstructorPage() {
 
     const [currentPage, setCurrentPage] = useState(1)
     const [itemsPerPage, setItemsPerPage] = useState(5)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [filterStatus, setFilterStatus] = useState<'all' | 'graded' | 'submitted'>('all')
+
+    // Filter Logic
+    const filteredSubmissions = submissions.filter(sub => {
+        const matchesSearch =
+            sub.student.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            sub.student.email?.toLowerCase().includes(searchQuery.toLowerCase())
+
+        const matchesStatus =
+            filterStatus === 'all' ? true :
+                filterStatus === 'graded' ? sub.status === 'graded' :
+                    sub.status !== 'graded' // 'submitted' means pending grading
+
+        return matchesSearch && matchesStatus
+    })
 
     // Pagination Logic
     const indexOfLastItem = currentPage * itemsPerPage
     const indexOfFirstItem = indexOfLastItem - itemsPerPage
-    const currentSubmissions = submissions.slice(indexOfFirstItem, indexOfLastItem)
-    const totalPages = Math.ceil(submissions.length / itemsPerPage)
+    const currentSubmissions = filteredSubmissions.slice(indexOfFirstItem, indexOfLastItem)
+    const totalPages = Math.ceil(filteredSubmissions.length / itemsPerPage)
 
     const handlePageChange = (page: number) => {
         if (page >= 1 && page <= totalPages) {
@@ -133,23 +149,63 @@ export default function ExamDetailInstructorPage() {
             <div className="flex flex-col md:flex-row justify-between items-end md:items-center mb-4 gap-4">
                 <h2 className="text-xl font-bold text-slate-900">Student Submissions</h2>
 
-                {/* Entries Selector */}
-                <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <span>Show</span>
-                    <select
-                        value={itemsPerPage}
-                        onChange={(e) => {
-                            setItemsPerPage(Number(e.target.value))
-                            setCurrentPage(1) // Reset to first page
-                        }}
-                        className="bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-1.5"
-                    >
-                        <option value={5}>5</option>
-                        <option value={10}>10</option>
-                        <option value={20}>20</option>
-                        <option value={50}>50</option>
-                    </select>
-                    <span>entries</span>
+                <div className="flex flex-col sm:flex-row gap-3 items-end sm:items-center w-full md:w-auto">
+                    {/* Search */}
+                    <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <Search size={14} className="text-slate-400" />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search students..."
+                            value={searchQuery}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value)
+                                setCurrentPage(1)
+                            }}
+                            className="pl-9 pr-4 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 w-full sm:w-48"
+                        />
+                    </div>
+
+                    {/* Filter Status */}
+                    <div className="flex items-center gap-2">
+                        <div className="relative">
+                            <select
+                                value={filterStatus}
+                                onChange={(e) => {
+                                    setFilterStatus(e.target.value as any)
+                                    setCurrentPage(1)
+                                }}
+                                className="pl-8 pr-8 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 appearance-none bg-white"
+                            >
+                                <option value="all">All Status</option>
+                                <option value="graded">Graded</option>
+                                <option value="submitted">Ungraded</option>
+                            </select>
+                            <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
+                                <Filter size={14} className="text-slate-400" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Entries Selector */}
+                    <div className="flex items-center gap-2 text-sm text-slate-600 ml-auto sm:ml-0">
+                        <span>Show</span>
+                        <select
+                            value={itemsPerPage}
+                            onChange={(e) => {
+                                setItemsPerPage(Number(e.target.value))
+                                setCurrentPage(1) // Reset to first page
+                            }}
+                            className="bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-1.5"
+                        >
+                            <option value={5}>5</option>
+                            <option value={10}>10</option>
+                            <option value={20}>20</option>
+                            <option value={50}>50</option>
+                        </select>
+                        <span>entries</span>
+                    </div>
                 </div>
             </div>
 
@@ -223,10 +279,10 @@ export default function ExamDetailInstructorPage() {
                                     </td>
                                 </tr>
                             ))}
-                            {submissions.length === 0 && (
+                            {currentSubmissions.length === 0 && (
                                 <tr>
                                     <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
-                                        No submissions yet.
+                                        {submissions.length === 0 ? 'No submissions yet.' : 'No results matching your filters.'}
                                     </td>
                                 </tr>
                             )}
@@ -235,10 +291,10 @@ export default function ExamDetailInstructorPage() {
                 </div>
 
                 {/* Pagination Controls */}
-                {submissions.length > 0 && (
+                {filteredSubmissions.length > 0 ? (
                     <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-white">
                         <div className="text-sm text-slate-500">
-                            Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to <span className="font-medium">{Math.min(indexOfLastItem, submissions.length)}</span> of <span className="font-medium">{submissions.length}</span> results
+                            Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to <span className="font-medium">{Math.min(indexOfLastItem, filteredSubmissions.length)}</span> of <span className="font-medium">{filteredSubmissions.length}</span> results
                         </div>
                         <div className="flex items-center gap-2">
                             <button
@@ -260,7 +316,7 @@ export default function ExamDetailInstructorPage() {
                             </button>
                         </div>
                     </div>
-                )}
+                ) : null}
             </div>
         </div>
     )
