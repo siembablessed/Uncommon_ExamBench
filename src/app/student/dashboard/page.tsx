@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { MapPin } from 'lucide-react'
 import { ClassItem, ExamItem, SubmissionItem } from '@/types'
 import StudentStatsCards from '@/components/dashboard/StudentStatsCards'
@@ -11,6 +11,7 @@ import EnrolledClassesList from '@/components/dashboard/EnrolledClassesList'
 
 
 export default function StudentDashboard() {
+    const supabase = createClient()
     const [exams, setExams] = useState<ExamItem[]>([])
     const [submissions, setSubmissions] = useState<SubmissionItem[]>([])
     // Enrolled classes might need a custom type if ClassItem doesn't match the join query exact shape

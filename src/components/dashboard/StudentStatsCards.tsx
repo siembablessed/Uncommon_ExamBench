@@ -1,4 +1,4 @@
-import { CheckCircle, Clock, FileText, TrendingUp, AlertCircle } from 'lucide-react'
+import { CheckCircle, Clock, FileText, TrendingUp, AlertCircle, ArrowUpRight } from 'lucide-react'
 
 interface StudentStatsProps {
     avgGrade: number
@@ -17,10 +17,13 @@ export default function StudentStatsCards({ avgGrade, pending, missed, completed
                         <TrendingUp size={24} />
                     </div>
                     <div className="text-3xl font-bold text-slate-900 mb-1">{typeof avgGrade === 'number' ? avgGrade.toFixed(1) : avgGrade}%</div>
-                    <div className="text-sm font-medium text-slate-500">Average Grade</div>
+                    <div className="text-sm font-medium text-slate-500 flex items-center gap-1">
+                        Average Grade
+                        <ArrowUpRight size={16} className="text-emerald-500" />
+                    </div>
                 </div>
                 <div className="absolute -bottom-4 -right-4 text-emerald-50 opacity-50 transform rotate-12 group-hover:scale-110 transition-transform duration-500">
-                    <TrendingUp size={100} />
+                    <TrendingUp size={120} />
                 </div>
             </div>
 
@@ -31,10 +34,13 @@ export default function StudentStatsCards({ avgGrade, pending, missed, completed
                         <Clock size={24} />
                     </div>
                     <div className="text-3xl font-bold text-slate-900 mb-1">{pending}</div>
-                    <div className="text-sm font-medium text-slate-500">Pending Exams</div>
+                    <div className="text-sm font-medium text-slate-500 flex items-center gap-1">
+                        Pending Exams
+                        <ArrowUpRight size={16} className="text-indigo-500" />
+                    </div>
                 </div>
                 <div className="absolute -bottom-4 -right-4 text-indigo-50 opacity-50 transform rotate-12 group-hover:scale-110 transition-transform duration-500">
-                    <Clock size={100} />
+                    <Clock size={120} />
                 </div>
             </div>
 
@@ -45,10 +51,13 @@ export default function StudentStatsCards({ avgGrade, pending, missed, completed
                         <AlertCircle size={24} />
                     </div>
                     <div className="text-3xl font-bold text-slate-900 mb-1">{missed}</div>
-                    <div className="text-sm font-medium text-slate-500">Missed Exams</div>
+                    <div className="text-sm font-medium text-slate-500 flex items-center gap-1">
+                        Missed Exams
+                        {/* No arrow for missed, or maybe down arrow? Keeping consistent for now or omitting */}
+                    </div>
                 </div>
                 <div className="absolute -bottom-4 -right-4 text-red-50 opacity-50 transform rotate-12 group-hover:scale-110 transition-transform duration-500">
-                    <AlertCircle size={100} />
+                    <AlertCircle size={120} />
                 </div>
             </div>
 
@@ -59,10 +68,13 @@ export default function StudentStatsCards({ avgGrade, pending, missed, completed
                         <CheckCircle size={24} />
                     </div>
                     <div className="text-3xl font-bold text-slate-900 mb-1">{completed}</div>
-                    <div className="text-sm font-medium text-slate-500">Completed Exams</div>
+                    <div className="text-sm font-medium text-slate-500 flex items-center gap-1">
+                        Completed Exams
+                        <ArrowUpRight size={16} className="text-slate-500" />
+                    </div>
                 </div>
                 <div className="absolute -bottom-4 -right-4 text-slate-100 opacity-50 transform rotate-12 group-hover:scale-110 transition-transform duration-500">
-                    <CheckCircle size={100} />
+                    <CheckCircle size={120} />
                 </div>
             </div>
         </div>

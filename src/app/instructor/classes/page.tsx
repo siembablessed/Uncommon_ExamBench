@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Users, PlusCircle, ArrowRight, Trash2, Calendar } from 'lucide-react'
@@ -15,6 +15,7 @@ interface ClassItem {
 }
 
 export default function ClassesPage() {
+    const supabase = createClient()
     const router = useRouter()
     const [classes, setClasses] = useState<ClassItem[]>([])
     const [loading, setLoading] = useState(true)
@@ -103,17 +104,20 @@ export default function ClassesPage() {
 
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {classes.map((cls) => (
-                    <div key={cls.id} className="group relative bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col justify-between overflow-hidden">
-                        <div className="p-6">
+                    <div key={cls.id} className="group relative overflow-hidden bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-all duration-300 flex flex-col justify-between">
+                        <div className="relative z-10">
                             <div className="flex items-start justify-between mb-4">
-                                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg group-hover:scale-105 transition-transform duration-300">
+                                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300 shadow-sm">
                                     <Users size={24} />
                                 </div>
-                                <div className="relative">
+                                <div className="relative z-20">
                                     <button
-                                        onClick={() => initiateDelete(cls.id)}
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            initiateDelete(cls.id)
+                                        }}
                                         disabled={deleteLoading === cls.id}
-                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
                                         title="Delete Class"
                                     >
                                         {deleteLoading === cls.id ? (
@@ -126,12 +130,16 @@ export default function ClassesPage() {
                             </div>
 
                             <Link href={`/instructor/classes/${cls.id}`} className="block">
-                                <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors">
+                                <h3 className="text-xl font-bold text-slate-900 mb-1 group-hover:text-indigo-600 transition-colors">
                                     {cls.name}
                                 </h3>
 
-                                <div className="flex items-center gap-4 text-sm text-slate-500 mt-4">
-                                    <div className="flex items-center gap-1.5">
+                                <div className="text-xs font-mono text-slate-400 mb-4">
+                                    ID: {cls.id.slice(0, 8)}
+                                </div>
+
+                                <div className="flex items-center gap-4 text-sm text-slate-500">
+                                    <div className="flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded-md border border-slate-100">
                                         <Users size={14} />
                                         <span>{cls.student_count} Students</span>
                                     </div>
@@ -143,28 +151,31 @@ export default function ClassesPage() {
                             </Link>
                         </div>
 
-                        <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex items-center justify-between">
-                            <span className="text-xs font-mono text-slate-400">
-                                ID: {cls.id.slice(0, 8)}
-                            </span>
+                        {/* Action Link at Bottom */}
+                        <div className="mt-6 pt-4 border-t border-slate-50 flex justify-end relative z-10">
                             <Link
                                 href={`/instructor/classes/${cls.id}`}
                                 className="text-indigo-600 font-medium text-sm flex items-center group-hover:translate-x-1 transition-transform"
                             >
-                                Manage <ArrowRight size={16} className="ml-1" />
+                                Manage Class <ArrowRight size={16} className="ml-1" />
                             </Link>
+                        </div>
+
+                        {/* Decorative Background Icon */}
+                        <div className="absolute -bottom-4 -right-4 text-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500 transform rotate-12 scale-150 pointer-events-none">
+                            <Users size={100} />
                         </div>
                     </div>
                 ))}
 
                 {classes.length === 0 && (
-                    <div className="col-span-full py-16 text-center bg-white rounded-xl border border-dashed border-slate-300">
-                        <div className="w-16 h-16 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <div className="col-span-full py-16 text-center bg-white rounded-2xl border border-dashed border-slate-200">
+                        <div className="w-16 h-16 bg-slate-50 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
                             <Users size={32} />
                         </div>
-                        <h3 className="text-lg font-medium text-slate-900 mb-1">No classes yet</h3>
-                        <p className="text-slate-500 mb-6">Create your first class to get started</p>
-                        <Link href="/instructor/dashboard" className="btn-primary inline-flex">
+                        <h3 className="text-lg font-bold text-slate-900 mb-1">No classes yet</h3>
+                        <p className="text-slate-500 mb-6 max-w-sm mx-auto">Create your first class to verify functionality and start adding students.</p>
+                        <Link href="/instructor/dashboard" className="btn-primary inline-flex shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all">
                             Create Class
                         </Link>
                     </div>

@@ -3,10 +3,11 @@
 import Link from 'next/link'
 import { BookOpen, CheckCircle, Shield, Users, ArrowRight } from 'lucide-react'
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 export default function LandingPage() {
+  const supabase = createClient()
   const router = useRouter()
 
   const [loading, setLoading] = useState(true)

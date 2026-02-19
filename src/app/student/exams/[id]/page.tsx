@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Send, Clock, CheckCircle, FileText, AlertCircle } from 'lucide-react'
@@ -11,6 +11,7 @@ import confetti from 'canvas-confetti'
 import { toast } from 'sonner' // Add import
 
 export default function StudentExamPage() {
+    const supabase = createClient()
     const { id } = useParams()
     const router = useRouter()
     const [exam, setExam] = useState<any>(null)

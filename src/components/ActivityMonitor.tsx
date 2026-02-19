@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { useRouter, usePathname } from 'next/navigation'
 import { LogOut, Clock, AlertTriangle } from 'lucide-react'
 
@@ -11,6 +11,7 @@ const WARNING_DURATION_MS = 60 * 1000 // 60 Seconds
 const WARNING_TRIGGER_MS = INACTIVITY_LIMIT_MS - WARNING_DURATION_MS
 
 export default function ActivityMonitor() {
+    const supabase = createClient()
     const [lastActivity, setLastActivity] = useState(Date.now())
     const [showWarning, setShowWarning] = useState(false)
     const [timeLeft, setTimeLeft] = useState(WARNING_DURATION_MS / 1000)

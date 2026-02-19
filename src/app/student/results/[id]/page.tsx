@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { ArrowLeft, CheckCircle, XCircle, Clock, FileText, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 
@@ -31,6 +31,7 @@ interface ResultsData {
 }
 
 export default function ExamResultsPage() {
+    const supabase = createClient()
     const params = useParams()
     const router = useRouter()
     const [data, setData] = useState<ResultsData | null>(null)

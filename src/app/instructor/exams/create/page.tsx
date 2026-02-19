@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { Upload, Calendar, FileText, ArrowLeft, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 
 export default function CreateExamPage() {
+    const supabase = createClient()
     const router = useRouter()
     const [loading, setLoading] = useState(false)
     const [classes, setClasses] = useState<any[]>([])
@@ -350,8 +351,8 @@ export default function CreateExamPage() {
                                                             setQuestions(newQuestions)
                                                         }}
                                                         className={`text-left text-sm px-3 py-2 rounded-md transition-all border w-full flex items-center justify-between group/btn ${isCorrect
-                                                                ? 'bg-emerald-100 text-emerald-900 border-emerald-500 font-semibold shadow-sm ring-1 ring-emerald-500'
-                                                                : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-400 hover:text-indigo-600 hover:bg-slate-50'
+                                                            ? 'bg-emerald-100 text-emerald-900 border-emerald-500 font-semibold shadow-sm ring-1 ring-emerald-500'
+                                                            : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-400 hover:text-indigo-600 hover:bg-slate-50'
                                                             }`}
                                                     >
                                                         <span className="flex items-center">

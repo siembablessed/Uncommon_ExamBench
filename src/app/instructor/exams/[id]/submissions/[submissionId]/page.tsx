@@ -1,13 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, User, Save, CheckCircle, XCircle, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
 export default function SubmissionDetailsPage() {
+    const supabase = createClient()
     const params = useParams()
     const examId = params.id as string
     const submissionId = params.submissionId as string

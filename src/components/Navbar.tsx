@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect, useState, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { User } from '@supabase/supabase-js'
 import { LogOut, Settings, User as UserIcon, ChevronDown, Bell, Check, X } from 'lucide-react'
@@ -18,6 +18,7 @@ interface Notification {
 }
 
 export default function Navbar() {
+    const supabase = createClient()
     const [user, setUser] = useState<User | null>(null)
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)

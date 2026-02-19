@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, User, FileText, CheckCircle, Clock, ChevronLeft, ChevronRight, Search, Filter } from 'lucide-react'
@@ -23,6 +23,7 @@ interface Submission {
 
 
 export default function ExamDetailInstructorPage() {
+    const supabase = createClient()
     const params = useParams()
     const examId = params.id as string
     const [submissions, setSubmissions] = useState<Submission[]>([])
@@ -128,7 +129,7 @@ export default function ExamDetailInstructorPage() {
                 <ArrowLeft size={18} className="mr-2" /> Back to Dashboard
             </Link>
 
-            <div className="card mb-8 border-l-4 border-l-indigo-500">
+            <div className="card mb-8 bg-gradient-to-r from-indigo-50/50 via-white to-white border-none shadow-sm">
                 <div className="flex justify-between items-start">
                     <div>
                         <h1 className="text-3xl font-bold text-slate-900 mb-2">{exam.title}</h1>
@@ -323,6 +324,7 @@ export default function ExamDetailInstructorPage() {
 }
 
 function AutoGradeButton({ submission, examTitle, onGraded }: { submission: any, examTitle: string, onGraded: (grade: number) => void }) {
+    const supabase = createClient()
     const [grading, setGrading] = useState(false)
 
     const handleAutoGrade = async () => {

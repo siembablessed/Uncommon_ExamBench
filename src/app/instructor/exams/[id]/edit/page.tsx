@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import { ArrowLeft, PlusCircle, Trash2, Save } from 'lucide-react'
 import Link from 'next/link'
@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { toast } from 'sonner' // Add import
 
 export default function EditExamPage() {
+    const supabase = createClient()
     // ...
 
     const fetchExamDetails = async () => {

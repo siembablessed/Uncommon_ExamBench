@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, UserPlus, Trash2, Users, Mail, Settings } from 'lucide-react'
+import { ArrowLeft, UserPlus, Trash2, Users, Mail, Settings, Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import ConfirmDialog from '@/components/ConfirmDialog'
 
 interface Student {
@@ -21,6 +21,7 @@ interface ClassDetails {
 }
 
 export default function ClassDetailPage() {
+    const supabase = createClient()
     const params = useParams()
     const router = useRouter()
     const classId = params.id as string
@@ -31,6 +32,27 @@ export default function ClassDetailPage() {
     const [emailInput, setEmailInput] = useState('')
     const [isAdding, setIsAdding] = useState(false)
     const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null)
+
+    // --- Enrolled Students Pagination ---
+    const [searchEnrolled, setSearchEnrolled] = useState('')
+    const [currentPage, setCurrentPage] = useState(1)
+    const [itemsPerPage, setItemsPerPage] = useState(5)
+
+    const filteredStudents = students.filter(s =>
+        s.full_name?.toLowerCase().includes(searchEnrolled.toLowerCase()) ||
+        s.email?.toLowerCase().includes(searchEnrolled.toLowerCase())
+    )
+
+    const indexOfLastItem = currentPage * itemsPerPage
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage
+    const currentStudents = filteredStudents.slice(indexOfFirstItem, indexOfLastItem)
+    const totalPages = Math.ceil(filteredStudents.length / itemsPerPage)
+
+    const handlePageChange = (page: number) => {
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page)
+        }
+    }
 
     useEffect(() => {
         fetchClassDetails()
@@ -174,15 +196,19 @@ export default function ClassDetailPage() {
         } catch (error: any) {
             console.error('Delete class error:', error)
             alert('Failed to delete class: ' + error.message)
-            setIsDeleting(false)
         }
     }
+
 
     // --- Directory Feature ---
     const [directory, setDirectory] = useState<Student[]>([])
     const [directoryLoading, setDirectoryLoading] = useState(false)
     const [searchTerm, setSearchTerm] = useState('')
     const [showDirectory, setShowDirectory] = useState(false)
+
+    // Directory Pagination State
+    const [directoryPage, setDirectoryPage] = useState(1)
+    const [directoryItemsPerPage, setDirectoryItemsPerPage] = useState(5)
 
     const fetchDirectory = async () => {
         try {
@@ -248,6 +274,18 @@ export default function ClassDetailPage() {
         s.email?.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
+    // Directory Pagination Logic
+    const indexOfLastDirectoryItem = directoryPage * directoryItemsPerPage
+    const indexOfFirstDirectoryItem = indexOfLastDirectoryItem - directoryItemsPerPage
+    const currentDirectoryItems = filteredDirectory.slice(indexOfFirstDirectoryItem, indexOfLastDirectoryItem)
+    const totalDirectoryPages = Math.ceil(filteredDirectory.length / directoryItemsPerPage)
+
+    const handleDirectoryPageChange = (page: number) => {
+        if (page >= 1 && page <= totalDirectoryPages) {
+            setDirectoryPage(page)
+        }
+    }
+
     if (loading) return (
         <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
@@ -266,7 +304,7 @@ export default function ClassDetailPage() {
     )
 
     return (
-        <div className="container mx-auto px-6 py-8">
+        <div className="container mx-auto px-6 py-8" suppressHydrationWarning>
             <Link href="/instructor/classes" className="flex items-center text-slate-500 hover:text-indigo-600 mb-6 transition-colors">
                 <ArrowLeft size={16} className="mr-1" /> Back to Classes
             </Link>
@@ -306,9 +344,41 @@ export default function ClassDetailPage() {
                     <div className="grid lg:grid-cols-3 gap-12">
                         {/* Student List */}
                         <div className="lg:col-span-2 space-y-6">
-                            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-                                Enrolled Students
-                            </h2>
+                            <div className="flex flex-col sm:flex-row justify-between items-end sm:items-center gap-4">
+                                <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                                    Enrolled Students
+                                </h2>
+
+                                <div className="flex gap-3 items-center w-full sm:w-auto">
+                                    <div className="relative flex-1 sm:flex-initial">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                            <Search size={14} className="text-slate-400" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Search enrolled..."
+                                            value={searchEnrolled}
+                                            onChange={(e) => {
+                                                setSearchEnrolled(e.target.value)
+                                                setCurrentPage(1)
+                                            }}
+                                            className="pl-9 pr-4 py-1.5 text-sm border border-slate-200 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 w-full sm:w-48"
+                                        />
+                                    </div>
+                                    <select
+                                        value={itemsPerPage}
+                                        onChange={(e) => {
+                                            setItemsPerPage(Number(e.target.value))
+                                            setCurrentPage(1)
+                                        }}
+                                        className="bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-1.5"
+                                    >
+                                        <option value={5}>5</option>
+                                        <option value={10}>10</option>
+                                        <option value={20}>20</option>
+                                    </select>
+                                </div>
+                            </div>
 
                             {students.length === 0 ? (
                                 <div className="text-center p-8 bg-slate-50 rounded-lg border border-dashed border-slate-300">
@@ -325,7 +395,7 @@ export default function ClassDetailPage() {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-200">
-                                            {students.map((student) => (
+                                            {currentStudents.map((student) => (
                                                 <tr key={student.id} className="hover:bg-white transition-colors">
                                                     <td className="px-4 py-3 font-medium text-slate-900">{student.full_name}</td>
                                                     <td className="px-4 py-3 text-slate-500">{student.email}</td>
@@ -340,8 +410,43 @@ export default function ClassDetailPage() {
                                                     </td>
                                                 </tr>
                                             ))}
+                                            {filteredStudents.length === 0 && (
+                                                <tr>
+                                                    <td colSpan={3} className="px-4 py-8 text-center text-slate-500">
+                                                        No students found matching "{searchEnrolled}"
+                                                    </td>
+                                                </tr>
+                                            )}
                                         </tbody>
                                     </table>
+
+                                    {/* Pagination Controls */}
+                                    {filteredStudents.length > 0 && (
+                                        <div className="px-4 py-3 border-t border-slate-200 flex items-center justify-between bg-white">
+                                            <div className="text-xs text-slate-500">
+                                                Showing <span className="font-medium">{indexOfFirstItem + 1}</span> to <span className="font-medium">{Math.min(indexOfLastItem, filteredStudents.length)}</span> of <span className="font-medium">{filteredStudents.length}</span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <button
+                                                    onClick={() => handlePageChange(currentPage - 1)}
+                                                    disabled={currentPage === 1}
+                                                    className="p-1 rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                >
+                                                    <ChevronLeft size={14} />
+                                                </button>
+                                                <span className="text-xs font-medium text-slate-700 px-2">
+                                                    {currentPage} / {totalPages}
+                                                </span>
+                                                <button
+                                                    onClick={() => handlePageChange(currentPage + 1)}
+                                                    disabled={currentPage === totalPages}
+                                                    className="p-1 rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                >
+                                                    <ChevronRight size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -403,37 +508,73 @@ export default function ClassDetailPage() {
                                     </form>
                                 ) : (
                                     <div className="space-y-4">
-                                        <input
-                                            type="text"
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                            placeholder="Search students..."
-                                            className="input-field w-full text-sm"
-                                        />
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                value={searchTerm}
+                                                onChange={(e) => {
+                                                    setSearchTerm(e.target.value)
+                                                    setDirectoryPage(1)
+                                                }}
+                                                placeholder="Search students..."
+                                                className="input-field w-full text-sm flex-1"
+                                            />
 
-                                        <div className="h-64 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100 bg-slate-50">
-                                            {directoryLoading ? (
-                                                <div className="p-4 text-center text-slate-400 text-xs">Loading directory...</div>
-                                            ) : filteredDirectory.length === 0 ? (
-                                                <div className="p-4 text-center text-slate-400 text-xs">
-                                                    {searchTerm ? 'No matches found.' : 'No available students found.'}
-                                                </div>
-                                            ) : (
-                                                filteredDirectory.map(student => (
-                                                    <div key={student.id} className="p-3 bg-white hover:bg-indigo-50 transition-colors flex justify-between items-center group">
-                                                        <div className="min-w-0">
-                                                            <div className="text-sm font-medium text-slate-900 truncate">{student.full_name}</div>
-                                                            <div className="text-xs text-slate-500 truncate">{student.email}</div>
+                                        </div>
+
+                                        <div className="border border-slate-200 rounded-lg bg-slate-50">
+                                            <div className="h-64 overflow-y-auto divide-y divide-slate-100">
+                                                {directoryLoading ? (
+                                                    <div className="p-4 text-center text-slate-400 text-xs">Loading directory...</div>
+                                                ) : filteredDirectory.length === 0 ? (
+                                                    <div className="p-4 text-center text-slate-400 text-xs">
+                                                        {searchTerm ? 'No matches found.' : 'No available students found.'}
+                                                    </div>
+                                                ) : (
+                                                    currentDirectoryItems.map(student => (
+                                                        <div key={student.id} className="p-3 bg-white hover:bg-indigo-50 transition-colors flex justify-between items-center group">
+                                                            <div className="min-w-0">
+                                                                <div className="text-sm font-medium text-slate-900 truncate">{student.full_name}</div>
+                                                                <div className="text-xs text-slate-500 truncate">{student.email}</div>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => handleAddFromDirectory(student)}
+                                                                className="text-indigo-600 hover:bg-indigo-100 p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                title="Add to Class"
+                                                            >
+                                                                <UserPlus size={16} />
+                                                            </button>
                                                         </div>
+                                                    ))
+                                                )}
+                                            </div>
+
+                                            {/* Directory Pagination Controls */}
+                                            {filteredDirectory.length > 0 && (
+                                                <div className="px-3 py-2 border-t border-slate-200 flex items-center justify-between bg-white rounded-b-lg">
+                                                    <div className="text-[10px] text-slate-500">
+                                                        {indexOfFirstDirectoryItem + 1}-{Math.min(indexOfLastDirectoryItem, filteredDirectory.length)} of {filteredDirectory.length}
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
                                                         <button
-                                                            onClick={() => handleAddFromDirectory(student)}
-                                                            className="text-indigo-600 hover:bg-indigo-100 p-1.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                                            title="Add to Class"
+                                                            onClick={() => handleDirectoryPageChange(directoryPage - 1)}
+                                                            disabled={directoryPage === 1}
+                                                            className="p-1 rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                                         >
-                                                            <UserPlus size={16} />
+                                                            <ChevronLeft size={12} />
+                                                        </button>
+                                                        <span className="text-[10px] font-medium text-slate-700 px-1">
+                                                            {directoryPage}/{totalDirectoryPages}
+                                                        </span>
+                                                        <button
+                                                            onClick={() => handleDirectoryPageChange(directoryPage + 1)}
+                                                            disabled={directoryPage === totalDirectoryPages}
+                                                            className="p-1 rounded border border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                                        >
+                                                            <ChevronRight size={12} />
                                                         </button>
                                                     </div>
-                                                ))
+                                                </div>
                                             )}
                                         </div>
                                     </div>

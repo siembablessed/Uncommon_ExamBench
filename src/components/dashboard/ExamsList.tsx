@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { FileText, Calendar, ArrowRight, Trash2, Edit, Plus } from 'lucide-react'
 import { ExamItem } from '@/types'
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import ConfirmDialog from '@/components/ConfirmDialog'
 
@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { useEffect } from 'react'
 
 export default function ExamsList({ exams: initialExams }: ExamsListProps) {
+    const supabase = createClient()
     const router = useRouter()
     const [exams, setExams] = useState(initialExams)
     const [confirmOpen, setConfirmOpen] = useState(false)

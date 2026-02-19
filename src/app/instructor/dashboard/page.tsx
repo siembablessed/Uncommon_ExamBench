@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { MapPin } from 'lucide-react'
 import OnlineUsersList from '@/components/OnlineUsersList'
 import StudentDirectory from '@/components/dashboard/StudentDirectory'
@@ -13,6 +13,7 @@ import { ClassItem, ExamItem } from '@/types'
 import { toast } from 'sonner'
 
 export default function InstructorDashboard() {
+    const supabase = createClient()
     const [classes, setClasses] = useState<ClassItem[]>([])
     const [exams, setExams] = useState<ExamItem[]>([])
     const [loading, setLoading] = useState(true)
@@ -138,7 +139,10 @@ export default function InstructorDashboard() {
 
                 <div className="flex items-center gap-4 bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm">
                     <button
-                        onClick={() => setActiveTab('overview')}
+                        onClick={() => {
+                            console.log('Switching to overview')
+                            setActiveTab('overview')
+                        }}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'overview'
                             ? 'bg-slate-900 text-white shadow-md'
                             : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
@@ -147,7 +151,10 @@ export default function InstructorDashboard() {
                         Overview
                     </button>
                     <button
-                        onClick={() => setActiveTab('directory')}
+                        onClick={() => {
+                            console.log('Switching to directory')
+                            setActiveTab('directory')
+                        }}
                         className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === 'directory'
                             ? 'bg-slate-900 text-white shadow-md'
                             : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'

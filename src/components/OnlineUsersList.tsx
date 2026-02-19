@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@/lib/supabase'
 import { User as UserIcon, MapPin, ChevronUp, ChevronDown, Activity } from 'lucide-react'
 
 interface OnlineUser {
@@ -13,6 +13,7 @@ interface OnlineUser {
 }
 
 export default function OnlineUsersList() {
+    const supabase = createClient()
     const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([])
     const [currentUser, setCurrentUser] = useState<any>(null)
     const [isExpanded, setIsExpanded] = useState(false)
@@ -161,8 +162,8 @@ export default function OnlineUsersList() {
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-full shadow-lg border transition-all duration-300 hover:scale-105 active:scale-95 ${isExpanded
-                        ? 'bg-slate-900 text-white border-slate-900'
-                        : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:shadow-indigo-100'
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-slate-700 border-slate-200 hover:border-indigo-300 hover:shadow-indigo-100'
                     }`}
             >
                 <div className="relative flex items-center justify-center">
