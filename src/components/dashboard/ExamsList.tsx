@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { FileText, Calendar, ArrowRight, Trash2, Edit, Plus } from 'lucide-react'
+import { FileText, Calendar, ArrowRight, Trash2, Edit, Plus, ChevronLeft, ChevronRight } from 'lucide-react'
 import { ExamItem } from '@/types'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
@@ -20,6 +20,9 @@ export default function ExamsList({ exams: initialExams }: ExamsListProps) {
     const [confirmOpen, setConfirmOpen] = useState(false)
     const [examToDelete, setExamToDelete] = useState<string | null>(null)
     const [isDeleting, setIsDeleting] = useState(false)
+    const [activeTab, setActiveTab] = useState<'active' | 'closed'>('active')
+    const [page, setPage] = useState(0)
+    const ITEMS_PER_PAGE = 2
 
     // Sync state with props when server refetches (fixes "reappears on refresh" if caused by stale client state)
     useEffect(() => {
@@ -55,36 +58,113 @@ export default function ExamsList({ exams: initialExams }: ExamsListProps) {
         }
     }
 
+    const filteredExams = exams.filter(exam => {
+        const isClosed = new Date() > new Date(exam.due_date)
+        return activeTab === 'active' ? !isClosed : isClosed
+    })
+
+    const totalPages = Math.ceil(filteredExams.length / ITEMS_PER_PAGE)
+    const paginatedExams = filteredExams.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE)
+
+    const handleTabChange = (tab: 'active' | 'closed') => {
+        setActiveTab(tab)
+        setPage(0)
+    }
+
+    const handlePrevPage = () => {
+        setPage(p => Math.max(0, p - 1))
+    }
+
+    const handleNextPage = () => {
+        setPage(p => Math.min(totalPages - 1, p + 1))
+    }
+
     return (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-full">
             <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                    <div className="p-1.5 bg-violet-50 text-violet-600 rounded-lg">
-                        <FileText size={18} />
+                <div className="flex items-center gap-3">
+                    <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                        <div className="p-1.5 bg-violet-50 text-violet-600 rounded-lg">
+                            <FileText size={18} />
+                        </div>
+                        Recent Exams
+                    </h2>
+
+                    {/* Pagination Controls (only show if needed) */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center bg-slate-50 rounded-lg p-0.5 border border-slate-100">
+                            <button
+                                onClick={handlePrevPage}
+                                disabled={page === 0}
+                                className="p-1 hover:bg-white hover:shadow-sm rounded-md disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:shadow-none transition-all text-slate-500"
+                            >
+                                <ChevronLeft size={14} />
+                            </button>
+                            <span className="text-[10px] font-medium text-slate-400 px-1 select-none">
+                                {page + 1}/{totalPages}
+                            </span>
+                            <button
+                                onClick={handleNextPage}
+                                disabled={page === totalPages - 1}
+                                className="p-1 hover:bg-white hover:shadow-sm rounded-md disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:shadow-none transition-all text-slate-500"
+                            >
+                                <ChevronRight size={14} />
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-3">
+                    {/* Tab Switcher */}
+                    <div className="bg-slate-100 p-1 rounded-lg flex text-xs font-medium">
+                        <button
+                            onClick={() => handleTabChange('active')}
+                            className={`px-3 py-1 rounded-md transition-all ${activeTab === 'active'
+                                ? 'bg-white text-slate-900 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            Active
+                        </button>
+                        <button
+                            onClick={() => handleTabChange('closed')}
+                            className={`px-3 py-1 rounded-md transition-all ${activeTab === 'closed'
+                                ? 'bg-white text-slate-900 shadow-sm'
+                                : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                        >
+                            Closed
+                        </button>
                     </div>
-                    Recent Exams
-                </h2>
-                <Link
-                    href="/instructor/exams/create"
-                    className="flex items-center gap-1 text-sm font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors"
-                >
-                    <Plus size={16} /> New
-                </Link>
+
+                    <Link
+                        href="/instructor/exams/create"
+                        className="flex items-center gap-1 text-sm font-medium text-indigo-600 hover:text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                        <Plus size={16} /> New
+                    </Link>
+                </div>
             </div>
 
-            <div className="p-4 flex-1 overflow-y-auto max-h-[500px]">
-                {exams.length === 0 ? (
-                    <div className="text-center py-10 px-4 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
-                        <div className="mx-auto w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-3">
-                            <FileText size={24} />
+            <div className="p-4 flex-1 overflow-y-auto">
+                {filteredExams.length === 0 ? (
+                    <div className="text-center py-8 px-4 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                        <div className="mx-auto w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-2">
+                            <FileText size={20} />
                         </div>
-                        <h3 className="text-sm font-semibold text-slate-900">No exams yet</h3>
-                        <p className="text-xs text-slate-500 mt-1">Create your first exam to see it here.</p>
-                        <Link href="/instructor/exams/create" className="text-indigo-600 font-medium text-xs mt-3 block hover:underline">Create Exam</Link>
+                        <h3 className="text-sm font-semibold text-slate-900">No {activeTab} exams</h3>
+                        <p className="text-xs text-slate-500 mt-1">
+                            {activeTab === 'active'
+                                ? "You don't have any active exams right now."
+                                : "No past exams found."}
+                        </p>
+                        {activeTab === 'active' && (
+                            <Link href="/instructor/exams/create" className="text-indigo-600 font-medium text-xs mt-3 block hover:underline">Create Exam</Link>
+                        )}
                     </div>
                 ) : (
                     <div className="space-y-3">
-                        {exams.map((exam) => (
+                        {paginatedExams.map((exam) => (
                             <div key={exam.id} className="p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:border-violet-100 hover:shadow-md transition-all duration-200 group relative">
                                 <div className="flex justify-between items-start mb-2">
                                     <div>

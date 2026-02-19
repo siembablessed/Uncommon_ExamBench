@@ -24,13 +24,28 @@ export default function ActivityMonitor() {
     // Only monitor on dashboard pages or protected routes
     const isProtectedRoute = pathname?.startsWith('/instructor') || pathname?.startsWith('/student')
 
-    // Check if we have a session to monitor
+    // Check if we have a session to monitor & Listen for Auth Changes
     useEffect(() => {
         const checkSession = async () => {
             const { data: { session } } = await supabase.auth.getSession()
             setIsActiveSession(!!session)
         }
         checkSession()
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'SIGNED_IN') {
+                setIsActiveSession(true)
+                setShowWarning(false)
+                setLastActivity(Date.now())
+            } else if (event === 'SIGNED_OUT') {
+                setIsActiveSession(false)
+                setShowWarning(false)
+            }
+        })
+
+        return () => {
+            subscription.unsubscribe()
+        }
     }, [pathname])
 
     const handleActivity = useCallback(() => {

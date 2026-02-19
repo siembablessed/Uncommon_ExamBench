@@ -185,7 +185,7 @@ export default function InstructorDashboard() {
                             />
                         )}
 
-                        <div className="grid md:grid-cols-2 gap-6 h-[500px]">
+                        <div className="grid md:grid-cols-2 gap-6">
                             <ClassesList
                                 classes={classes}
                                 onCreateClass={() => setShowCreateClass(true)}
