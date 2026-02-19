@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { ArrowLeft, Send, Clock, CheckCircle, FileText, AlertCircle } from 'lucide-react'
 import ExamTimer from '@/components/ExamTimer'
 import confetti from 'canvas-confetti'
+import ConfirmDialog from '@/components/ConfirmDialog'
 
 import { toast } from 'sonner' // Add import
 
@@ -25,6 +26,8 @@ export default function StudentExamPage() {
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
 
     const hasQuestions = exam?.questions && exam.questions.length > 0
+
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false)
 
     // Navigation Guard
     useEffect(() => {
@@ -105,30 +108,31 @@ export default function StudentExamPage() {
     const handleTimeUp = () => {
         if (!submitted) {
             toast.warning('Time is up! Your exam is being submitted automatically.')
-            handleSubmit(new Event('submit') as any, true)
+            executeSubmission(true)
         }
     }
 
-    const handleSubmit = async (e: React.FormEvent | any, isAuto = false) => {
-        if (e && e.preventDefault) e.preventDefault()
+    // Triggered by the "Complete Exam" button
+    const handleCompleteClick = (e: React.MouseEvent) => {
+        e.preventDefault()
+        setIsConfirmOpen(true)
+    }
 
-        const hasQuestions = exam.questions && exam.questions.length > 0
-
-        // Validation (skip if auto-submit)
-        if (!isAuto && hasQuestions) {
-            const answeredCount = Object.keys(mcqAnswers).length
-            if (answeredCount < exam.questions.length) {
-                if (!confirm(`You have answered ${answeredCount} out of ${exam.questions.length} questions. Are you sure you want to submit?`)) return
-            }
-        }
-
-        if (!isAuto && !hasQuestions && !answerText.trim()) {
-            toast.error('Please enter your answer.')
-            return
-        }
+    const executeSubmission = async (isAuto = false) => {
+        setSubmitted(true) // Optimistic update to prevent double submission
 
         try {
             setLoading(true)
+            const hasQuestions = exam.questions && exam.questions.length > 0
+
+            // Final Validation (skip if auto-submit)
+            if (!isAuto && !hasQuestions && !answerText.trim()) {
+                toast.error('Please enter your answer.')
+                setSubmitted(false) // Revert optimistic update
+                setLoading(false) // Reset loading
+                return
+            }
+
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) throw new Error('User not found')
 
@@ -167,7 +171,6 @@ export default function StudentExamPage() {
 
             if (error) throw error
 
-            setSubmitted(true)
             setSubmissionData(newSub)
 
             if (hasQuestions) {
@@ -177,16 +180,17 @@ export default function StudentExamPage() {
             if (!isAuto) toast.success('Exam submitted successfully!')
 
         } catch (error: any) {
+            setSubmitted(false) // Revert if failed
             if (error.code === '23505') {
                 // Unique violation: Already submitted
                 setSubmitted(true)
                 toast.success('You have already submitted this exam.')
             } else if (error.code === '23503') {
-                // Foreign key violation: Exam or Student does not exist
+                // Foreign key violation
                 if (error.message.includes('submissions_exam_id_fkey')) {
-                    toast.error('Submission failed: This exam no longer exists. It may have been deleted by the instructor.')
+                    toast.error('Submission failed: This exam no longer exists.')
                 } else {
-                    toast.error('Submission failed: Invalid user profile. Please try logging out and back in.')
+                    toast.error('Submission failed: Invalid user profile.')
                 }
             } else {
                 console.error('Submission error:', error)
@@ -194,6 +198,7 @@ export default function StudentExamPage() {
             }
         } finally {
             setLoading(false)
+            setIsConfirmOpen(false)
         }
     }
 
@@ -229,6 +234,8 @@ export default function StudentExamPage() {
 
     const hasPdf = !!exam.file_url
     const currentQuestion = hasQuestions ? exam.questions[currentQuestionIndex] : null
+    const answeredCount = Object.keys(mcqAnswers).length
+    const totalQuestions = exam.questions?.length || 0
 
     const handleExit = (e: React.MouseEvent) => {
         if (!submitted) {
@@ -311,7 +318,7 @@ export default function StudentExamPage() {
                             <div className="flex flex-col h-full overflow-hidden w-full mx-auto">
 
                                 {hasQuestions ? (
-                                    <form onSubmit={handleSubmit} className="flex flex-col h-full">
+                                    <form onSubmit={(e) => e.preventDefault()} className="flex flex-col h-full">
 
                                         {/* Header inside Card */}
                                         <div className="pt-8 px-8 pb-4 bg-white z-10">
@@ -387,7 +394,8 @@ export default function StudentExamPage() {
 
                                             {currentQuestionIndex === exam.questions.length - 1 ? (
                                                 <button
-                                                    type="submit"
+                                                    type="button"
+                                                    onClick={handleCompleteClick}
                                                     disabled={loading}
                                                     className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200/50 hover:shadow-indigo-300/50 py-3 px-8 rounded-xl text-sm font-semibold transition-all hover:-translate-y-0.5 active:translate-y-0"
                                                 >
@@ -421,7 +429,7 @@ export default function StudentExamPage() {
                                         />
                                         <button
                                             type="button"
-                                            onClick={handleSubmit}
+                                            onClick={handleCompleteClick}
                                             disabled={loading || !answerText.trim()}
                                             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200/50 hover:shadow-indigo-300/50 py-4 rounded-xl text-base font-semibold transition-all hover:-translate-y-0.5 active:translate-y-0"
                                         >
@@ -434,6 +442,20 @@ export default function StudentExamPage() {
                     </div>
                 )}
             </div>
+
+            <ConfirmDialog
+                isOpen={isConfirmOpen}
+                title="Submit Exam"
+                message={
+                    hasQuestions
+                        ? `You have answered ${answeredCount} out of ${totalQuestions} questions. Are you sure you want to submit? This action cannot be undone.`
+                        : "Are you sure you want to submit your exam response? This action cannot be undone."
+                }
+                confirmText="Yes, Submit Exam"
+                onConfirm={() => executeSubmission(false)}
+                onCancel={() => setIsConfirmOpen(false)}
+                isLoading={loading}
+            />
         </div>
     )
 }
