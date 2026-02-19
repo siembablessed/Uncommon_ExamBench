@@ -24,7 +24,7 @@ export default function CreateExamPage() {
     const [answersFile, setAnswersFile] = useState<File | null>(null) // New: Marking Scheme
 
     // AI & Parser State
-    const [activeTab, setActiveTab] = useState<'upload' | 'ai' | 'parser'>('upload')
+    const [activeTab, setActiveTab] = useState<'ai' | 'parser'>('parser')
     const [isGenerating, setIsGenerating] = useState(false)
     const [aiTopic, setAiTopic] = useState('')
     const [questions, setQuestions] = useState<any[]>([])
@@ -222,14 +222,6 @@ export default function CreateExamPage() {
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
                 {/* Tabs */}
                 <div className="flex border-b border-slate-100">
-                    <button
-                        onClick={() => setActiveTab('upload')}
-                        className={`flex-1 py-4 text-sm font-medium transition-colors ${activeTab === 'upload' ? 'bg-indigo-50 text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-500 hover:text-indigo-600'}`}
-                    >
-                        <div className="flex items-center justify-center gap-2">
-                            <Upload size={18} /> Upload PDF
-                        </div>
-                    </button>
                     <button
                         onClick={() => setActiveTab('parser')}
                         className={`flex-1 py-4 text-sm font-medium transition-colors ${activeTab === 'parser' ? 'bg-emerald-50 text-emerald-600 border-b-2 border-emerald-600' : 'text-slate-500 hover:text-emerald-600'}`}
@@ -444,33 +436,6 @@ export default function CreateExamPage() {
                         </div>
                     </div>
 
-                    {activeTab === 'upload' && (
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Exam PDF</label>
-                            <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 text-center hover:bg-slate-50 transition cursor-pointer relative group">
-                                <input
-                                    type="file"
-                                    accept=".pdf"
-                                    onChange={handleFileChange}
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    required={activeTab === 'upload'}
-                                />
-                                {file ? (
-                                    <div className="flex items-center justify-center gap-2 text-indigo-600 bg-indigo-50 py-2 rounded">
-                                        <FileText size={20} />
-                                        <span className="font-medium">{file.name}</span>
-                                    </div>
-                                ) : (
-                                    <div className="text-slate-500 group-hover:text-indigo-600 transition-colors">
-                                        <Upload size={32} className="mx-auto mb-3 opacity-50 group-hover:opacity-100" />
-                                        <p className="font-medium">Click or drag PDF here</p>
-                                        <p className="text-xs text-slate-400 mt-1">PDF up to 10MB</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
                     <button
                         type="submit"
                         disabled={loading}
@@ -480,6 +445,7 @@ export default function CreateExamPage() {
                     </button>
 
                 </form>
+
             </div>
         </div>
     )

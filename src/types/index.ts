@@ -43,3 +43,28 @@ export interface UserProfile {
     avatar_url?: string
     hub?: string
 }
+
+export interface Assignment {
+    id: string
+    title: string
+    description: string
+    course_id: string
+    class_id: string
+    due_date: string
+    points: number
+    late_penalty_amount: number
+    created_by: string
+    created_at: string
+}
+
+export interface AssignmentSubmission {
+    id: string
+    assignment_id: string
+    student_id: string
+    file_url: string
+    submitted_at: string
+    is_late: boolean
+    grade: number | null
+    feedback: string | null
+    agreement_confirmed: boolean
+}

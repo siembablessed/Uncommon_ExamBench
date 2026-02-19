@@ -7,15 +7,16 @@ import OnlineUsersList from '@/components/OnlineUsersList'
 import StudentDirectory from '@/components/dashboard/StudentDirectory'
 import StatsCards from '@/components/dashboard/StatsCards'
 import ClassesList from '@/components/dashboard/ClassesList'
-import ExamsList from '@/components/dashboard/ExamsList'
+import TimelineList from '@/components/dashboard/TimelineList'
 import CreateClassModal from '@/components/dashboard/CreateClassModal'
-import { ClassItem, ExamItem } from '@/types'
+import { ClassItem, ExamItem, Assignment } from '@/types'
 import { toast } from 'sonner'
 
 export default function InstructorDashboard() {
     const supabase = createClient()
     const [classes, setClasses] = useState<ClassItem[]>([])
     const [exams, setExams] = useState<ExamItem[]>([])
+    const [assignments, setAssignments] = useState<Assignment[]>([])
     const [loading, setLoading] = useState(true)
     const [newClassName, setNewClassName] = useState('')
     const [showCreateClass, setShowCreateClass] = useState(false)
@@ -60,6 +61,15 @@ export default function InstructorDashboard() {
                 .order('created_at', { ascending: false })
 
             if (examsData) setExams(examsData)
+
+            // Fetch assignments created by this instructor
+            const { data: assignmentsData } = await supabase
+                .from('assignments')
+                .select('*')
+                .eq('created_by', user.id)
+                .order('created_at', { ascending: false })
+
+            if (assignmentsData) setAssignments(assignmentsData)
 
             // Fetch submissions for metrics
             const { data: submissionsData } = await supabase
@@ -174,7 +184,6 @@ export default function InstructorDashboard() {
                     />
 
                     {/* Main Content Grid */}
-                    {/* Main Content Grid */}
                     <div className="space-y-6">
                         {showCreateClass && (
                             <CreateClassModal
@@ -190,7 +199,7 @@ export default function InstructorDashboard() {
                                 classes={classes}
                                 onCreateClass={() => setShowCreateClass(true)}
                             />
-                            <ExamsList exams={exams} />
+                            <TimelineList exams={exams} assignments={assignments} />
                         </div>
                     </div>
 
