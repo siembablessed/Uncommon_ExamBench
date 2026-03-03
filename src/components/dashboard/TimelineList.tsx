@@ -66,6 +66,55 @@ export default function TimelineList({ exams: initialExams, assignments: initial
         }
     }
 
+    // Submission Counts
+    const [submissionCounts, setSubmissionCounts] = useState<Record<string, number>>({})
+
+    useEffect(() => {
+        const fetchCounts = async () => {
+            const counts: Record<string, number> = {}
+            const examIds = initialExams.map(e => e.id)
+            const assignmentIds = initialAssignments.map(a => a.id)
+
+            if (examIds.length > 0) {
+                const { data } = await supabase
+                    .from('submissions')
+                    .select('exam_id')
+                    .in('exam_id', examIds)
+
+                if (data) {
+                    data.forEach(s => {
+                        counts[s.exam_id] = (counts[s.exam_id] || 0) + 1
+                    })
+                }
+            }
+
+            if (assignmentIds.length > 0) {
+                const { data } = await supabase
+                    .from('assignment_submissions')
+                    .select('assignment_id')
+                    .in('assignment_id', assignmentIds)
+
+                if (data) {
+                    data.forEach(s => {
+                        counts[s.assignment_id] = (counts[s.assignment_id] || 0) + 1
+                    })
+                }
+            }
+            setSubmissionCounts(counts)
+        }
+
+        fetchCounts()
+    }, [initialExams, initialAssignments])
+
+    const handleViewSubmissions = (id: string, type: 'exam' | 'assignment') => {
+        const count = submissionCounts[id] || 0
+        if (count === 0) {
+            toast.info(`No submissions yet for this ${type}.`)
+        } else {
+            router.push(`/instructor/${type}s/${id}`)
+        }
+    }
+
     const filteredItems = items.filter(item => {
         const isClosed = new Date() > new Date(item.due_date)
         return activeTab === 'active' ? !isClosed : isClosed
@@ -251,12 +300,20 @@ export default function TimelineList({ exams: initialExams, assignments: initial
                                     </div>
                                 </div>
 
-                                <Link
-                                    href={`/instructor/${item.type}s/${item.id}`}
+                                <button
+                                    onClick={() => handleViewSubmissions(item.id, item.type)}
                                     className="mt-3 flex items-center justify-between w-full text-xs font-medium text-violet-600 bg-violet-50 hover:bg-violet-100 p-2 rounded-lg transition-colors"
                                 >
-                                    View Submissions <ArrowRight size={14} />
-                                </Link>
+                                    View Submissions
+                                    <span className="flex items-center gap-2">
+                                        {submissionCounts[item.id] > 0 && (
+                                            <span className="bg-violet-200 text-violet-800 px-1.5 py-0.5 rounded-full text-[10px]">
+                                                {submissionCounts[item.id]}
+                                            </span>
+                                        )}
+                                        <ArrowRight size={14} />
+                                    </span>
+                                </button>
                             </div>
                         ))}
                     </div>

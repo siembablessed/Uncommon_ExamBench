@@ -29,6 +29,7 @@ export interface SubmissionItem {
     status: 'submitted' | 'graded' | 'late'
     created_at: string
     exam_id?: string
+    assignment_id?: string
     student_id?: string
     content?: any
     feedback?: any

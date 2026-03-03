@@ -18,21 +18,18 @@ export default function OnlineUsersList() {
     const [currentUser, setCurrentUser] = useState<any>(null)
     const [isExpanded, setIsExpanded] = useState(false)
     const [isInstructor, setIsInstructor] = useState(false)
+    const [isMounted, setIsMounted] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
+        setIsMounted(true)
         const setupPresence = async () => {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return
             setCurrentUser(user)
 
             // simple role check from metadata
-            const role = user.user_metadata?.role
-            if (role === 'instructor') {
-                setIsInstructor(true)
-            } else {
-                return // Don't even connect if not instructor
-            }
+            // Allow everyone to connect
 
             const channel = supabase.channel('online-users', {
                 config: {
@@ -94,7 +91,9 @@ export default function OnlineUsersList() {
         }
     }, [containerRef])
 
-    if (!isInstructor) return null
+    // if (!isInstructor) return null // Removed restriction
+
+    if (!isMounted) return null
 
     // Filter out duplicates if any
     const uniqueUsers = Array.from(new Map(onlineUsers.map(u => [u.user_id, u])).values())

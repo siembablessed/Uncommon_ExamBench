@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { MapPin } from 'lucide-react'
-import OnlineUsersList from '@/components/OnlineUsersList'
 import StudentDirectory from '@/components/dashboard/StudentDirectory'
 import StatsCards from '@/components/dashboard/StatsCards'
 import ClassesList from '@/components/dashboard/ClassesList'
@@ -203,8 +202,7 @@ export default function InstructorDashboard() {
                         </div>
                     </div>
 
-                    {/* Fixed Position Live Activity Pill */}
-                    <OnlineUsersList />
+                    {/* Fixed Position Live Activity Pill Removed (Global) */}
                 </div>
             ) : (
                 <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">

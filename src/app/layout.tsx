@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import ActivityMonitor from "@/components/ActivityMonitor";
+import OnlineUsersList from "@/components/OnlineUsersList";
 import { Toaster } from 'sonner'
 
 const geistSans = Geist({
@@ -33,6 +34,7 @@ export default function RootLayout({
       >
         <Navbar />
         <ActivityMonitor /> { /* Tracks user inactivity */}
+        <OnlineUsersList />
         <main className="min-h-screen bg-gray-50 pb-10">
           {children}
         </main>
